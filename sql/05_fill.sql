@@ -36,13 +36,13 @@ INSERT INTO role (code, name, description) VALUES
     ('ADMIN',    'Администратор системы','Роли, депозиторы, финальные согласования, отчетность');
 
 INSERT INTO employee (full_name, email, phone, password_hash, hired_at) VALUES
-    ('Иванов Иван Иванович',      'i.ivanovich@example.com',  '+4779001001', '$2a$10$seedhash000000000000001', '2019-03-11'),
-    ('Берг Ингрид Мария',         'i.berg@example.com',       '+4779001002', '$2a$10$seedhash000000000000002', '2020-06-01'),
-    ('Соловьев Артем Игоревич',   'a.solovyev@example.com',   '+4779001003', '$2a$10$seedhash000000000000003', '2021-09-15'),
-    ('Иванов Сергей Николаевич',  'm.serg@example.com',       '+4779001004', '$2a$10$seedhash000000000000004', '2018-01-22'),
-    ('Васильева Елена Игоревна',  'k.vasil@example.com',      '+4779001005', '$2a$10$seedhash000000000000005', '2022-02-14'),
-    ('Петрова Ольга Сергеевна',   'p.petrova@example.com',    '+4779001006', '$2a$10$seedhash000000000000006', '2023-05-03'),
-    ('Ковалева Мария Сергеевна',  'm.kovaleva@example.com',   '+4779001007', '$2a$10$seedhash000000000000007', '2023-11-20');
+    ('Иванов Иван Иванович',      'i.ivanovich@example.com',  '+4779001001', '$argon2id$v=19$m=19456,t=2,p=1$nJYEC7alaXMvbGkerNPzXQ$3j9qg6PUJFR1jpXnKJRITbmmCJ+vqkrIpZKkBSA8Gpw', '2019-03-11'),
+    ('Берг Ингрид Мария',         'i.berg@example.com',       '+4779001002', '$argon2id$v=19$m=19456,t=2,p=1$PDebSz188Y40vXcz6UpYrw$3UoKtIeTC/oL8Y7ShUMyO4Y/GsoEyg+61EoSbDB6rWQ', '2020-06-01'),
+    ('Соловьев Артем Игоревич',   'a.solovyev@example.com',   '+4779001003', '$argon2id$v=19$m=19456,t=2,p=1$vrFxyUU4ut4rpcGxen7LQA$AVaTmhff7Erv66Jlb4qATXrkuP0ASJssQqeY5ydIIk8', '2021-09-15'),
+    ('Иванов Сергей Николаевич',  'm.serg@example.com',       '+4779001004', '$argon2id$v=19$m=19456,t=2,p=1$5QDfbPqsNO2ShIVfjwmQTQ$PdFTFibVKLjz8zlgpToAkl5yVi6C9Kor5COOUAyTdcc', '2018-01-22'),
+    ('Васильева Елена Игоревна', 'k.vasil@example.com',       '+4779001005', '$argon2id$v=19$m=19456,t=2,p=1$U8H7ZovxApa3/VEx+T1eag$YBaFA9cq1J8tSdaKbGme7eWqDWlrI/56b/O7S3Xk014', '2022-02-14'),
+    ('Петрова Ольга Сергеевна',  'p.petrova@example.com',     '+4779001006', '$argon2id$v=19$m=19456,t=2,p=1$ouKB0vmAOaW00AP/Jd6DIw$9HbtENeHoLBW6eMaCFyTBfl02YRvfFzoLKSmmK8bL5Q', '2023-05-03'),
+    ('Ковалева Мария Сергеевна', 'm.kovaleva@example.com',    '+4779001007', '$argon2id$v=19$m=19456,t=2,p=1$Dawffsp7iPg9gFXcFz1mvg$hE7k/CsugoHWjvKjmdwhRNAGZdAOVXTSY9nxgg+pbLM', '2023-11-20');
 
 -- id: 1 Иванов И.И. (руководитель, ADMIN+CURATOR), 2 Берг И.М. (CURATOR),
 --     3 Соловьев А.И. (CURATOR), 4 Иванов С.Н. (ENGINEER), 5 Васильева Е.И. (ENGINEER),
@@ -91,7 +91,7 @@ BEGIN
                             contact_person, contact_email, contact_phone, password_hash, status)
     VALUES ('Всероссийский институт генетических ресурсов растений имени Н.И. Вавилова', 'RU', '1027810324487',
             'Россия, Санкт-Петербург, ул. Большая Морская, 42/44', 'Тарасов Савелий Дмитриевич',
-            'vir@example.org', '+78125712548', '$2a$10$dephash0000000000000001', 'AWAITING_CONTRACT')
+            'vir@example.org', '+78125712548', '$argon2id$v=19$m=19456,t=2,p=1$ix/7H8uUAD7rmcpwY7ipbA$xJxaulEsZP3YIWDLYqCxuCb2+Dn211V1gOyqzvVn9iI', 'AWAITING_CONTRACT')
     RETURNING id INTO v_dep;
 
     -- Система формирует типовой договор хранения
@@ -222,9 +222,6 @@ BEGIN
     INSERT INTO withdrawal_session_box (session_id, box_id) SELECT v_session, unnest(v_boxes);
 
     UPDATE withdrawal_session SET status = 'COMPLETED', completed_at = now() WHERE id = v_session;
-    UPDATE withdrawal_request SET status = 'FULFILLED' WHERE id = v_request;
-    UPDATE box SET status = 'WITHDRAWN', storage_place_id = NULL, withdrawn_at = now()
-     WHERE id = ANY(v_boxes);
 END $$;
 
 COMMIT;

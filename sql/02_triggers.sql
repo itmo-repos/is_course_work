@@ -72,7 +72,9 @@ LANGUAGE plpgsql AS $$
 BEGIN
     IF NEW.status = 'COMPLETED' AND OLD.status IS DISTINCT FROM 'COMPLETED' THEN
         UPDATE box
-           SET status = 'WITHDRAWN'
+           SET status = 'WITHDRAWN',
+               storage_place_id = NULL,
+               withdrawn_at = now()
          WHERE id IN (SELECT box_id FROM withdrawal_session_box WHERE session_id = NEW.id);
 
         UPDATE withdrawal_request SET status = 'FULFILLED' WHERE id = NEW.request_id;
