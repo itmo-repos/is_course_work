@@ -22,6 +22,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-webmvc'
     implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation 'org.apache.pdfbox:pdfbox:3.0.8'
     implementation 'org.bouncycastle:bcprov-jdk18on:1.80'
     compileOnly 'org.projectlombok:lombok'
     runtimeOnly 'org.postgresql:postgresql'
@@ -44,7 +45,8 @@ def helios = 'helios'
 def heliosDir = '/home/studs/s467669/seedbank-backend'
 def sshConfig = "${System.getProperty('user.home')}/.ssh/config"
 def run = { List command ->
-    def process = new ProcessBuilder(command.collect { it.toString() }).inheritIO().start()
+    def process = new ProcessBuilder(command.collect { it.toString() }).redirectErrorStream(true).start()
+    process.inputStream.withReader { reader -> reader.eachLine { line -> println(line) } }
     if (process.waitFor() != 0) throw new GradleException("Command failed: ${command[0]}")
 }
 def ssh = { String command -> run(['ssh', '-F', sshConfig, helios, command]) }
@@ -80,6 +82,23 @@ tasks.register('deployHelios') {
         group = 'deployment'
         description = "${action.capitalize()} the backend process on Helios."
         doLast {
+            ssh("sh '${heliosDir}/helios-control.sh' ${action}")
+        }
+    }
+}
+
+['cleanDbHelios': 'clean-db', 'resetDbHelios': 'reset-db'].each { taskName, action ->
+    tasks.register(taskName) {
+        group = 'deployment'
+        description = action == 'reset-db'
+                ? 'Deletes project data on Helios, recreates tables, loads test data and restarts backend.'
+                : 'Deletes project data on Helios, recreates empty tables and restarts backend.'
+        doLast {
+            ssh("mkdir -p '${heliosDir}/sql'")
+            run(['rsync', '-a', '-e', "ssh -F ${sshConfig}", "${rootProject.projectDir.parent}/sql/",
+                 "${helios}:${heliosDir}/sql/"])
+            run(['rsync', '-a', '-e', "ssh -F ${sshConfig}", "${rootProject.projectDir}/helios-control.sh",
+                 "${helios}:${heliosDir}/helios-control.sh"])
             ssh("sh '${heliosDir}/helios-control.sh' ${action}")
         }
     }
