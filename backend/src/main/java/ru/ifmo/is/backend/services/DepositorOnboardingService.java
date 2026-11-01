@@ -267,8 +267,8 @@ public class DepositorOnboardingService {
                 depositor.getCountry().getName(), depositor.getRegistrationNumber(), depositor.getLegalAddress(),
                 depositor.getContactPerson(), depositor.getContactEmail(), depositor.getContactPhone(),
                 depositor.getStatus(), depositor.getRejectionReason(), depositor.getCreatedAt(),
-                contract == null ? null : contract.getNumber(), contract == null ? null : contract.getStatus(),
-                contract == null ? null : contract.getRejectionReason());
+                contract == null ? null : new ContractView(contract.getNumber(), contract.getStatus(),
+                        contract.getRejectionReason()));
     }
 
     private StoredDocument document(String path, String filename, String mediaType) {
@@ -335,8 +335,9 @@ public class DepositorOnboardingService {
     public record DepositorView(Long id, String legalName, String countryCode, String countryName,
                                 String registrationNumber, String legalAddress, String contactPerson,
                                 String contactEmail, String contactPhone, DepositorStatus status,
-                                String rejectionReason, OffsetDateTime createdAt, String contractNumber,
-                                ContractStatus contractStatus, String contractRejectionReason) {}
+                                String rejectionReason, OffsetDateTime createdAt, ContractView contract) {}
+
+    public record ContractView(String number, ContractStatus status, String rejectionReason) {}
 
     public record StoredDocument(byte[] content, String filename, String mediaType) {}
 }

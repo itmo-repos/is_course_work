@@ -1,3 +1,11 @@
+// ./gradlew
+// publishHelios - собрать и загрузить JAR, управляющий скрипт и SQL на Helios
+// deployHelios  - выполнить publishHelios и перезапустить backend на Helios
+// statusHelios  - показать состояние процесса backend на Helios
+// stopHelios    - остановить backend на Helios
+// cleanDbHelios - пересоздать таблицы и перезапустить backend
+// resetDbHelios - пересоздать таблицы с тестовыми данными и перезапустить backend
+
 plugins {
     id 'java'
     id 'org.springframework.boot' version '4.1.2'

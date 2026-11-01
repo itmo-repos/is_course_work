@@ -20,7 +20,7 @@ command_line() {
 
 output() {
     printf "${OUTPUT_COLOR}"
-    cat "$RESPONSE"
+    python3 -m json.tool --no-ensure-ascii "$RESPONSE" 2>/dev/null || cat "$RESPONSE"
     printf "${RESET_COLOR}\n"
 }
 

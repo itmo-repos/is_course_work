@@ -267,4 +267,3 @@ END $$;
 
 COMMIT;
 
-ANALYZE;
