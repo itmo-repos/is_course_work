@@ -2,6 +2,8 @@ package ru.ifmo.is.backend.entitiy;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import ru.ifmo.is.backend.entitiy.enums.DepositorStatus;
 import java.time.OffsetDateTime;
 
@@ -41,7 +43,8 @@ public class Depositor {
     private String passwordHash;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+    @Column(name = "status", nullable = false, columnDefinition = "depositor_status")
     private DepositorStatus status = DepositorStatus.NEW_REQUEST;
 
     @Column(name = "rejection_reason", columnDefinition = "text")

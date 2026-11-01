@@ -10,6 +10,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import ru.ifmo.is.backend.entitiy.Depositor;
 import ru.ifmo.is.backend.entitiy.Employee;
+import ru.ifmo.is.backend.entitiy.enums.DepositorStatus;
 import ru.ifmo.is.backend.repository.DepositorRepository;
 import ru.ifmo.is.backend.repository.EmployeeRepository;
 
@@ -45,7 +46,7 @@ public class AccountAuthenticationProvider implements AuthenticationProvider {
         }
         if (depositor.isPresent()) {
             Depositor account = depositor.get();
-            if (account.getStatus() != ru.ifmo.is.backend.entitiy.enums.DepositorStatus.ACTIVE
+            if (account.getStatus() == DepositorStatus.REJECTED
                     || !passwordEncoder.matches(password, account.getPasswordHash())) {
                 throw new BadCredentialsException("Invalid email or password");
             }
