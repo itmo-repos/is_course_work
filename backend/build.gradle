@@ -21,6 +21,8 @@ repositories {
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-webmvc'
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation 'org.bouncycastle:bcprov-jdk18on:1.80'
     compileOnly 'org.projectlombok:lombok'
     runtimeOnly 'org.postgresql:postgresql'
     annotationProcessor 'org.projectlombok:lombok'
@@ -36,4 +38,49 @@ dependencies {
 
 tasks.named('test') {
     useJUnitPlatform()
+}
+
+def helios = 'helios'
+def heliosDir = '/home/studs/s467669/seedbank-backend'
+def sshConfig = "${System.getProperty('user.home')}/.ssh/config"
+def run = { List command ->
+    def process = new ProcessBuilder(command.collect { it.toString() }).inheritIO().start()
+    if (process.waitFor() != 0) throw new GradleException("Command failed: ${command[0]}")
+}
+def ssh = { String command -> run(['ssh', '-F', sshConfig, helios, command]) }
+
+tasks.register('publishHelios') {
+    group = 'deployment'
+    description = 'Builds and copies the backend JAR and SQL scripts to Helios.'
+    dependsOn tasks.named('bootJar')
+
+    doLast {
+        def jarFile = tasks.named('bootJar').get().archiveFile.get().asFile
+        ssh("mkdir -p '${heliosDir}/sql'")
+        run(['rsync', '-a', '-e', "ssh -F ${sshConfig}", jarFile, "${helios}:${heliosDir}/backend.jar"])
+        run(['rsync', '-a', '-e', "ssh -F ${sshConfig}", "${rootProject.projectDir}/helios-control.sh",
+             "${helios}:${heliosDir}/helios-control.sh"])
+        run(['rsync', '-a', '-e', "ssh -F ${sshConfig}", "${rootProject.projectDir.parent}/sql/",
+             "${helios}:${heliosDir}/sql/"])
+    }
+}
+
+tasks.register('deployHelios') {
+    group = 'deployment'
+    description = 'Publishes and restarts the backend on Helios.'
+    dependsOn tasks.named('publishHelios')
+
+    doLast {
+        ssh("sh '${heliosDir}/helios-control.sh' restart")
+    }
+}
+
+['statusHelios': 'status', 'stopHelios': 'stop'].each { taskName, action ->
+    tasks.register(taskName) {
+        group = 'deployment'
+        description = "${action.capitalize()} the backend process on Helios."
+        doLast {
+            ssh("sh '${heliosDir}/helios-control.sh' ${action}")
+        }
+    }
 }
