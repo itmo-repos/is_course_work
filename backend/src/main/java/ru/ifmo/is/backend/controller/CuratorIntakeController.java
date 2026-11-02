@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import ru.ifmo.is.backend.repository.projections.BatchBarcodeProjection;
 import ru.ifmo.is.backend.security.AuthPrincipal;
 import ru.ifmo.is.backend.services.IntakeService;
+import ru.ifmo.is.backend.services.ChamberMapService;
 import ru.ifmo.is.backend.services.IntakeService.*;
 
 import java.time.LocalDate;
@@ -19,6 +20,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class CuratorIntakeController {
     private final IntakeService service;
+    private final ChamberMapService chamberMapService;
 
     @GetMapping("/batches/by-barcode/{barcode}")
     public BatchBarcodeProjection identify(@AuthenticationPrincipal AuthPrincipal principal, @PathVariable String barcode) {
@@ -49,8 +51,14 @@ public class CuratorIntakeController {
     }
 
     @GetMapping("/chambers")
-    public List<ChamberView> chambers(@AuthenticationPrincipal AuthPrincipal principal) {
-        return service.activeChambers(principal);
+    public List<ChamberView> chambers(@AuthenticationPrincipal AuthPrincipal principal,
+                                     @RequestParam(defaultValue = "false") boolean includeInactive) {
+        return service.listChambers(principal, includeInactive);
+    }
+
+    @GetMapping("/chambers/{id}/places")
+    public ChamberMapService.ChamberMapView places(@AuthenticationPrincipal AuthPrincipal principal, @PathVariable Long id) {
+        return chamberMapService.getMap(principal, id);
     }
 
     @GetMapping("/chambers/{id}/free-places")

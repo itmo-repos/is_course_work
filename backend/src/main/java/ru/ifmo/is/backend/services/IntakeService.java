@@ -129,12 +129,14 @@ public class IntakeService {
         return sessionView(session);
     }
 
-    public List<ChamberView> activeChambers(AuthPrincipal principal) {
+    public List<ChamberView> listChambers(AuthPrincipal principal, boolean includeInactive) {
         requireCurator(principal);
         List<ChamberView> result = new ArrayList<>();
-        for (Chamber chamber : chambers.findAllByStatusOrderByCodeAsc(ChamberStatus.ACTIVE)) {
-            result.add(new ChamberView(chamber.getId(), chamber.getCode(), chamber.getName(),
-                    places.findFreePlaces(chamber.getId()).size()));
+        List<Chamber> selected = includeInactive ? chambers.findAllByOrderByCodeAsc()
+                : chambers.findAllByStatusOrderByCodeAsc(ChamberStatus.ACTIVE);
+        for (Chamber chamber : selected) {
+            int available = chamber.getStatus() == ChamberStatus.ACTIVE ? places.findFreePlaces(chamber.getId()).size() : 0;
+            result.add(new ChamberView(chamber.getId(), chamber.getCode(), chamber.getName(), chamber.getStatus(), available));
         }
         return result;
     }
@@ -370,7 +372,7 @@ public class IntakeService {
         return new ResponseStatusException(HttpStatus.CONFLICT, message);
     }
 
-    public record ChamberView(Long id, String code, String name, int freePlaceCount) {}
+    public record ChamberView(Long id, String code, String name, ChamberStatus status, int freePlaceCount) {}
     public record PlaceView(Long id, Long chamberId, String chamberCode, short rackNo, short shelfNo, short rowNo) {}
     public record StoredBoxView(Long id, short seqNo, String barcode, BoxStatus status, String writeOffReason,
                                 OffsetDateTime placedAt, PlaceView storagePlace) {}

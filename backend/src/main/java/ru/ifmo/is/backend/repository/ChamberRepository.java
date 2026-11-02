@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface ChamberRepository extends JpaRepository<Chamber, Long> {
+    List<Chamber> findAllByOrderByCodeAsc();
     List<Chamber> findAllByStatusOrderByCodeAsc(ChamberStatus status);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
