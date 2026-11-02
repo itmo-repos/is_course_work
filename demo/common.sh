@@ -1,0 +1,64 @@
+#!/usr/bin/env bash
+# Часть общего сценария: запускается через demo/check-backend.sh.
+
+# Адрес и демо-аккаунты заданы здесь: скрипт не принимает аргументы.
+BASE_URL='http://127.0.0.1:8080'
+ADMIN_EMAIL='i.ivanovich@example.com'
+ADMIN_PASSWORD='Demo123!'
+APPLICANT_PASSWORD='Demo123!'
+RUN_ID="$(date +%s)-$RANDOM"
+APPLICANT_EMAIL="demo-$RUN_ID@example.org"
+
+COMMAND_COLOR='\033[36m'
+OUTPUT_COLOR='\033[32m'
+ERROR_COLOR='\033[31m'
+RESET_COLOR='\033[0m'
+
+command_line() {
+    printf "${COMMAND_COLOR}> %s${RESET_COLOR}\n" "$1"
+}
+
+output() {
+    printf "${OUTPUT_COLOR}"
+    python3 -m json.tool --no-ensure-ascii "$RESPONSE" 2>/dev/null || cat "$RESPONSE"
+    printf "${RESET_COLOR}\n"
+}
+
+http_status() {
+    printf "${OUTPUT_COLOR}HTTP %s${RESET_COLOR}\n" "$STATUS"
+}
+
+TEMP_DIR=$(mktemp -d)
+ADMIN_COOKIES="$TEMP_DIR/admin-cookies.txt"
+APPLICANT_COOKIES="$TEMP_DIR/applicant-cookies.txt"
+RESPONSE="$TEMP_DIR/response.json"
+TUNNEL_LOG="$TEMP_DIR/tunnel.log"
+GENERATED_CONTRACT="$TEMP_DIR/generated-contract.pdf"
+SIGNED_SCAN="$TEMP_DIR/signed-contract.pdf"
+ADMIN_SCAN="$TEMP_DIR/admin-scan.pdf"
+TUNNEL_PID=''
+
+cleanup() {
+    if [ -n "$TUNNEL_PID" ]; then
+        kill "$TUNNEL_PID" 2>/dev/null || true
+        wait "$TUNNEL_PID" 2>/dev/null || true
+    fi
+    rm -rf "$TEMP_DIR"
+}
+trap cleanup EXIT
+
+next_part() {
+    echo
+    while true; do
+        printf 'Введите 1 и нажмите Enter, чтобы продолжить: '
+        if ! read -r answer; then
+            echo
+            echo 'Демо остановлено.'
+            exit 0
+        fi
+        if [ "$answer" = '1' ]; then
+            break
+        fi
+        echo 'Для продолжения нужно ввести 1.'
+    done
+}
