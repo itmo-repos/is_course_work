@@ -87,6 +87,7 @@ CREATE TYPE notification_type AS ENUM (
 
 -- Начало с 1, потому что будет исопльзовано в том числе для отображения человеку
 CREATE SEQUENCE batch_number_seq START 1;
+CREATE SEQUENCE sample_accession_seq START 1;
 CREATE SEQUENCE pass_code_seq    START 1;
 
 -- всякие справочники, типа стран, описания ролей и видов растений

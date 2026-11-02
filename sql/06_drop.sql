@@ -45,6 +45,7 @@ DROP FUNCTION IF EXISTS trg_intake_session_close_passes() CASCADE;
 -- Последовательности и типы
 
 DROP SEQUENCE IF EXISTS batch_number_seq;
+DROP SEQUENCE IF EXISTS sample_accession_seq;
 DROP SEQUENCE IF EXISTS pass_code_seq;
 
 DROP TYPE IF EXISTS notification_type;
