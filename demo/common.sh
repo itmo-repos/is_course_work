@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Часть общего сценария: запускается через demo/check-backend.sh.
 
+command -v jq >/dev/null || { echo 'Нужен jq: sudo dnf install jq' >&2; exit 1; }
+
 # Адрес и демо-аккаунты заданы здесь: скрипт не принимает аргументы.
 BASE_URL='http://127.0.0.1:8080'
 ADMIN_EMAIL='i.ivanovich@example.com'
@@ -20,12 +22,26 @@ command_line() {
 
 output() {
     printf "${OUTPUT_COLOR}"
-    python3 -m json.tool --no-ensure-ascii "$RESPONSE" 2>/dev/null || cat "$RESPONSE"
+    jq . "$RESPONSE" 2>/dev/null || cat "$RESPONSE"
     printf "${RESET_COLOR}\n"
 }
 
 http_status() {
     printf "${OUTPUT_COLOR}HTTP %s${RESET_COLOR}\n" "$STATUS"
+}
+
+check_json() {
+    local filter="$1"
+    local message="$2"
+    shift 2
+    if ! jq -e "$@" "$filter" "$RESPONSE" >/dev/null; then
+        printf "${ERROR_COLOR}ОШИБКА: %s${RESET_COLOR}\n" "$message" >&2
+        exit 1
+    fi
+}
+
+section() {
+    printf "\n${ERROR_COLOR}=== %s ===${RESET_COLOR}\n" "$1"
 }
 
 TEMP_DIR=$(mktemp -d)
@@ -50,15 +66,15 @@ trap cleanup EXIT
 next_part() {
     echo
     while true; do
-        printf 'Введите 1 и нажмите Enter, чтобы продолжить: '
+        printf "${ERROR_COLOR}Порция проверок завершена. Нажмите Enter или введите 1, чтобы продолжить: ${RESET_COLOR}"
         if ! read -r answer; then
             echo
             echo 'Демо остановлено.'
             exit 0
         fi
-        if [ "$answer" = '1' ]; then
+        if [ -z "$answer" ] || [ "$answer" = '1' ]; then
             break
         fi
-        echo 'Для продолжения нужно ввести 1.'
+        printf "${ERROR_COLOR}Для продолжения нажмите Enter или введите 1.${RESET_COLOR}\n"
     done
 }

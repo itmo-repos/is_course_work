@@ -8,12 +8,7 @@ STATUS=$(curl -sS -o "$RESPONSE" -w '%{http_code}' \
 output
 http_status
 [ "$STATUS" = '200' ] || { echo 'ОШИБКА: ожидался HTTP 200' >&2; exit 1; }
-python3 - "$RESPONSE" <<'CHECK'
-import json, sys
-for sample in json.load(open(sys.argv[1])):
-    assert set(sample) == {'accessionCode', 'latinName', 'localName', 'originCountry',
-                           'collectionYear', 'seedQuantity', 'depositorName'}, sample
-CHECK
+check_json 'all(.[]; (keys | sort) == ["accessionCode", "collectionYear", "depositorName", "latinName", "localName", "originCountry", "seedQuantity"])' 'Каталог содержит неожиданные поля'
 
 echo
 echo '1.2. Справочник видов для заполнения паспорта'
@@ -23,4 +18,4 @@ STATUS=$(curl -sS -o "$RESPONSE" -w '%{http_code}' \
 output
 http_status
 [ "$STATUS" = '200' ] || { echo 'ОШИБКА: ожидался HTTP 200' >&2; exit 1; }
-SPECIES_ID=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))[0]["id"])' "$RESPONSE")
+SPECIES_ID=$(jq -er '.[0].id' "$RESPONSE")

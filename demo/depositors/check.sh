@@ -8,8 +8,8 @@ STATUS=$(curl -sS -c "$APPLICANT_COOKIES" -b "$APPLICANT_COOKIES" \
 output
 http_status
 [ "$STATUS" = '200' ] || { echo 'ОШИБКА: не удалось получить CSRF-токен' >&2; exit 1; }
-APPLICANT_CSRF_HEADER=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["headerName"])' "$RESPONSE")
-APPLICANT_CSRF_TOKEN=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["token"])' "$RESPONSE")
+APPLICANT_CSRF_HEADER=$(jq -er '.headerName' "$RESPONSE")
+APPLICANT_CSRF_TOKEN=$(jq -er '.token' "$RESPONSE")
 
 echo
 echo '3. Отправляем заявку: ожидаем статус NEW_REQUEST и HTTP 201'
@@ -26,8 +26,8 @@ STATUS=$(printf '%s' "$APPLICATION_JSON" | curl -sS -b "$APPLICANT_COOKIES" -c "
 output
 http_status
 [ "$STATUS" = '201' ] || { echo 'ОШИБКА: заявка не создана' >&2; exit 1; }
-APPLICANT_ID=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["id"])' "$RESPONSE")
-FINAL_STATUS=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["status"])' "$RESPONSE")
+APPLICANT_ID=$(jq -er '.id' "$RESPONSE")
+FINAL_STATUS=$(jq -er '.status' "$RESPONSE")
 [ "$FINAL_STATUS" = 'NEW_REQUEST' ] || { echo "ОШИБКА: ожидался NEW_REQUEST, получен $FINAL_STATUS" >&2; exit 1; }
 
 echo
@@ -38,8 +38,8 @@ STATUS=$(curl -sS -c "$ADMIN_COOKIES" -b "$ADMIN_COOKIES" -o "$RESPONSE" \
 output
 http_status
 [ "$STATUS" = '200' ] || { echo 'ОШИБКА: не удалось получить CSRF-токен администратора' >&2; exit 1; }
-ADMIN_CSRF_HEADER=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["headerName"])' "$RESPONSE")
-ADMIN_CSRF_TOKEN=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["token"])' "$RESPONSE")
+ADMIN_CSRF_HEADER=$(jq -er '.headerName' "$RESPONSE")
+ADMIN_CSRF_TOKEN=$(jq -er '.token' "$RESPONSE")
 command_line "curl -sS -X POST $BASE_URL/api/auth/login -H '$ADMIN_CSRF_HEADER: <csrf-токен>' -d '{\"email\":\"$ADMIN_EMAIL\",\"password\":\"<скрыт>\"}'"
 STATUS=$(printf '{"email":"%s","password":"%s"}' "$ADMIN_EMAIL" "$ADMIN_PASSWORD" | \
     curl -sS -b "$ADMIN_COOKIES" -c "$ADMIN_COOKIES" -o "$RESPONSE" -w '%{http_code}' \
@@ -57,8 +57,8 @@ STATUS=$(curl -sS -b "$ADMIN_COOKIES" -c "$ADMIN_COOKIES" -o "$RESPONSE" \
 output
 http_status
 [ "$STATUS" = '200' ] || { echo 'ОШИБКА: не удалось обновить CSRF-токен администратора' >&2; exit 1; }
-ADMIN_CSRF_HEADER=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["headerName"])' "$RESPONSE")
-ADMIN_CSRF_TOKEN=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["token"])' "$RESPONSE")
+ADMIN_CSRF_HEADER=$(jq -er '.headerName' "$RESPONSE")
+ADMIN_CSRF_TOKEN=$(jq -er '.token' "$RESPONSE")
 
 echo
 echo '6. Администратор одобряет заявку: ожидаем AWAITING_CONTRACT'
@@ -69,7 +69,7 @@ STATUS=$(curl -sS -b "$ADMIN_COOKIES" -c "$ADMIN_COOKIES" -o "$RESPONSE" -w '%{h
 output
 http_status
 [ "$STATUS" = '200' ] || { echo 'ОШИБКА: администратор не одобрил заявку' >&2; exit 1; }
-FINAL_STATUS=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["status"])' "$RESPONSE")
+FINAL_STATUS=$(jq -er '.status' "$RESPONSE")
 [ "$FINAL_STATUS" = 'AWAITING_CONTRACT' ] || { echo "ОШИБКА: ожидался AWAITING_CONTRACT, получен $FINAL_STATUS" >&2; exit 1; }
 
 echo
@@ -89,7 +89,7 @@ STATUS=$(curl -sS -b "$APPLICANT_COOKIES" -c "$APPLICANT_COOKIES" -o "$RESPONSE"
 output
 http_status
 [ "$STATUS" = '200' ] || { echo 'ОШИБКА: не удалось прочитать статус заявки депозитора' >&2; exit 1; }
-FINAL_STATUS=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["status"])' "$RESPONSE")
+FINAL_STATUS=$(jq -er '.status' "$RESPONSE")
 [ "$FINAL_STATUS" = 'AWAITING_CONTRACT' ] || { echo "ОШИБКА: ожидался AWAITING_CONTRACT, получен $FINAL_STATUS" >&2; exit 1; }
 
 echo
@@ -100,8 +100,8 @@ STATUS=$(curl -sS -b "$APPLICANT_COOKIES" -c "$APPLICANT_COOKIES" -o "$RESPONSE"
 output
 http_status
 [ "$STATUS" = '200' ] || { echo 'ОШИБКА: не удалось обновить CSRF-токен депозитора' >&2; exit 1; }
-APPLICANT_CSRF_HEADER=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["headerName"])' "$RESPONSE")
-APPLICANT_CSRF_TOKEN=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["token"])' "$RESPONSE")
+APPLICANT_CSRF_HEADER=$(jq -er '.headerName' "$RESPONSE")
+APPLICANT_CSRF_TOKEN=$(jq -er '.token' "$RESPONSE")
 
 echo
 . "$DEMO_DIR/batches/check-pending.sh"
@@ -127,7 +127,7 @@ STATUS=$(curl -sS -b "$APPLICANT_COOKIES" -c "$APPLICANT_COOKIES" -o "$RESPONSE"
 output
 http_status
 [ "$STATUS" = '200' ] || { echo 'ОШИБКА: скан не загружен' >&2; exit 1; }
-FINAL_STATUS=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["status"])' "$RESPONSE")
+FINAL_STATUS=$(jq -er '.status' "$RESPONSE")
 [ "$FINAL_STATUS" = 'VERIFICATION' ] || { echo "ОШИБКА: ожидался VERIFICATION, получен $FINAL_STATUS" >&2; exit 1; }
 
 echo
@@ -147,7 +147,7 @@ STATUS=$(curl -sS -b "$ADMIN_COOKIES" -c "$ADMIN_COOKIES" -o "$RESPONSE" -w '%{h
 output
 http_status
 [ "$STATUS" = '200' ] || { echo 'ОШИБКА: отклонение договора не обработано' >&2; exit 1; }
-FINAL_STATUS=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["status"])' "$RESPONSE")
+FINAL_STATUS=$(jq -er '.status' "$RESPONSE")
 [ "$FINAL_STATUS" = 'CONTRACT_REJECTED' ] || { echo "ОШИБКА: ожидался CONTRACT_REJECTED, получен $FINAL_STATUS" >&2; exit 1; }
 
 command_line "curl -sS -X POST $BASE_URL/api/admin/depositors/$APPLICANT_ID/contract/return-for-signing"
@@ -157,7 +157,7 @@ STATUS=$(curl -sS -b "$ADMIN_COOKIES" -c "$ADMIN_COOKIES" -o "$RESPONSE" -w '%{h
 output
 http_status
 [ "$STATUS" = '200' ] || { echo 'ОШИБКА: договор не возвращен на переподписание' >&2; exit 1; }
-FINAL_STATUS=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["status"])' "$RESPONSE")
+FINAL_STATUS=$(jq -er '.status' "$RESPONSE")
 [ "$FINAL_STATUS" = 'AWAITING_CONTRACT' ] || { echo "ОШИБКА: ожидался AWAITING_CONTRACT, получен $FINAL_STATUS" >&2; exit 1; }
 
 echo
@@ -190,7 +190,7 @@ STATUS=$(curl -sS -b "$APPLICANT_COOKIES" -c "$APPLICANT_COOKIES" -o "$RESPONSE"
 output
 http_status
 [ "$STATUS" = '200' ] || { echo 'ОШИБКА: профиль депозитора недоступен' >&2; exit 1; }
-FINAL_STATUS=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["status"])' "$RESPONSE")
+FINAL_STATUS=$(jq -er '.status' "$RESPONSE")
 [ "$FINAL_STATUS" = 'ACTIVE' ] || { echo "ОШИБКА: ожидался ACTIVE, получен $FINAL_STATUS" >&2; exit 1; }
 
 echo

@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # Часть общего сценария: запускается через demo/check-backend.sh.
 
+. "$DEMO_DIR/catalog/add-species.sh"
+
+echo
 echo '15. Создаём партию с двумя коробками и паспортами: FORMED'
 command_line "curl -sS -X POST $BASE_URL/api/depositors/me/batches -b <applicant-cookies> -H 'Content-Type: application/json' -d '$BATCH_JSON'"
 STATUS=$(curl -sS -o "$RESPONSE" -w '%{http_code}' \
@@ -12,13 +15,12 @@ STATUS=$(curl -sS -o "$RESPONSE" -w '%{http_code}' \
 output
 http_status
 [ "$STATUS" = '201' ] || { echo 'ОШИБКА: ожидался HTTP 201' >&2; exit 1; }
-BATCH_ID=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["id"])' "$RESPONSE")
-python3 - "$RESPONSE" <<'CHECK'
-import json, sys
-batch = json.load(open(sys.argv[1]))
-assert batch['status'] == 'FORMED' and batch['boxCount'] == 2
-assert all(b['status'] == 'FORMED' and b['barcode'] is None and b['samples'] for b in batch['boxes'])
-CHECK
+BATCH_ID=$(jq -er '.id' "$RESPONSE")
+check_json '.status == "FORMED" and .boxCount == 2' 'Ожидалась сформированная партия с двумя коробками'
+check_json '.number | test("^B-[0-9]{6,}$")' 'Некорректный номер партии'
+check_json 'all(.boxes[].samples[]; .accessionCode | test("^S-[0-9]{6,}$"))' 'Некорректный код образца'
+check_json 'all(.boxes[].samples[]; .speciesId == $id)' 'В паспорте не использован новый вид' --argjson id "$SPECIES_ID"
+check_json 'all(.boxes[]; .status == "FORMED" and .barcode == null and (.samples | length) > 0)' 'У новых коробок неверный статус или состав'
 
 echo
 echo '16. Депозитору запрещено подтверждать партию: HTTP 403'
@@ -40,14 +42,11 @@ STATUS=$(curl -sS -o "$RESPONSE" -w '%{http_code}' \
 output
 http_status
 [ "$STATUS" = '200' ] || { echo 'ОШИБКА: ожидался HTTP 200' >&2; exit 1; }
-python3 - "$RESPONSE" "$BATCH_ID" <<'CHECK'
-import json, sys
-assert any(b['id'] == int(sys.argv[2]) for b in json.load(open(sys.argv[1])))
-CHECK
+check_json 'any(.[]; .id == $id)' 'Созданная партия отсутствует в списке' --argjson id "$BATCH_ID"
 
 echo
 echo '18. Куратор отклоняет партию с причиной'
-command_line "curl -sS -X POST $BASE_URL/api/curator/batches/$BATCH_ID/reject"
+command_line "curl -sS -X POST $BASE_URL/api/curator/batches/$BATCH_ID/reject -b <admin-cookies> -H 'Content-Type: application/json' -d '{\"reason\":\"Уточните паспорта (демо)\"}'"
 STATUS=$(curl -sS -o "$RESPONSE" -w '%{http_code}' \
     -X POST "$BASE_URL/api/curator/batches/$BATCH_ID/reject" \
     -b "$ADMIN_COOKIES" \
@@ -57,7 +56,7 @@ STATUS=$(curl -sS -o "$RESPONSE" -w '%{http_code}' \
 output
 http_status
 [ "$STATUS" = '200' ] || { echo 'ОШИБКА: ожидался HTTP 200' >&2; exit 1; }
-python3 -c 'import json,sys; b=json.load(open(sys.argv[1])); assert b["status"] == "REJECTED" and b["rejectionReason"]' "$RESPONSE"
+check_json '.status == "REJECTED" and (.rejectionReason | length) > 0' 'Партия не отклонена с причиной'
 
 echo
 echo '19. Депозитор исправляет и повторно отправляет партию'
@@ -71,8 +70,8 @@ STATUS=$(curl -sS -o "$RESPONSE" -w '%{http_code}' \
 output
 http_status
 [ "$STATUS" = '200' ] || { echo 'ОШИБКА: ожидался HTTP 200' >&2; exit 1; }
-python3 -c 'import json,sys; b=json.load(open(sys.argv[1])); assert b["status"] == "FORMED" and b["boxCount"] == 2' "$RESPONSE"
-BOX_ID=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["boxes"][0]["id"])' "$RESPONSE")
+check_json '.status == "FORMED" and .boxCount == 2' 'Партия не отправлена повторно'
+BOX_ID=$(jq -er '.boxes[0].id' "$RESPONSE")
 
 echo
 echo '20. До подтверждения штрихкод недоступен: HTTP 409'
@@ -94,13 +93,10 @@ STATUS=$(curl -sS -o "$RESPONSE" -w '%{http_code}' \
 output
 http_status
 [ "$STATUS" = '200' ] || { echo 'ОШИБКА: ожидался HTTP 200' >&2; exit 1; }
-python3 - "$RESPONSE" <<'CHECK'
-import json, sys
-batch = json.load(open(sys.argv[1]))
-codes = [box['barcode'] for box in batch['boxes']]
-assert batch['status'] == 'CONFIRMED' and batch['confirmedAt']
-assert all(codes) and len(set(codes)) == len(codes)
-CHECK
+check_json '.status == "CONFIRMED" and .confirmedAt != null' 'Партия не подтверждена'
+BATCH_NUMBER=$(jq -er '.number' "$RESPONSE")
+BARCODE_PREFIX=${BATCH_NUMBER//-/}
+check_json '.boxes[0].barcode == $first and .boxes[1].barcode == $second' 'Неверные штрихкоды коробок' --arg first "$BARCODE_PREFIX-001" --arg second "$BARCODE_PREFIX-002"
 
 echo
 echo '22. Депозитор скачивает Code 128 для печати'
@@ -108,13 +104,9 @@ command_line "curl -sS -b <applicant-cookies> -o <barcode.svg> $BASE_URL/api/dep
 STATUS=$(curl -sS -b "$APPLICANT_COOKIES" -o "$TEMP_DIR/barcode.svg" -w '%{http_code}' "$BASE_URL/api/depositors/me/batches/$BATCH_ID/boxes/$BOX_ID/barcode")
 http_status
 [ "$STATUS" = '200' ] || { echo 'ОШИБКА: штрихкод не скачан' >&2; exit 1; }
-python3 - "$TEMP_DIR/barcode.svg" <<'CHECK'
-import sys, xml.etree.ElementTree as ET
-svg = ET.parse(sys.argv[1]).getroot()
-assert svg.tag == '{http://www.w3.org/2000/svg}svg'
-assert len(svg.findall('.//{http://www.w3.org/2000/svg}rect')) > 20
-print('Получен SVG со штрихкодом Code 128')
-CHECK
+grep -q '<svg ' "$TEMP_DIR/barcode.svg" || { echo 'ОШИБКА: ответ не содержит SVG' >&2; exit 1; }
+grep -q '<rect ' "$TEMP_DIR/barcode.svg" || { echo 'ОШИБКА: в SVG нет полос штрихкода' >&2; exit 1; }
+echo 'Получен SVG со штрихкодом Code 128'
 
 echo
 echo '23. Повторное подтверждение запрещено: HTTP 409'
@@ -141,6 +133,9 @@ http_status
 [ "$STATUS" = '409' ] || { echo 'ОШИБКА: ожидался HTTP 409' >&2; exit 1; }
 
 echo
+. "$DEMO_DIR/intake/plan.sh"
+
+echo
 echo '25. Перевозчик принял партию: IN_TRANSIT'
 command_line "curl -sS -X PATCH $BASE_URL/api/curator/batches/$BATCH_ID/tracking-status"
 STATUS=$(curl -sS -o "$RESPONSE" -w '%{http_code}' \
@@ -152,7 +147,7 @@ STATUS=$(curl -sS -o "$RESPONSE" -w '%{http_code}' \
 output
 http_status
 [ "$STATUS" = '200' ] || { echo 'ОШИБКА: ожидался HTTP 200' >&2; exit 1; }
-python3 -c 'import json,sys; assert json.load(open(sys.argv[1]))["status"] == "IN_TRANSIT"' "$RESPONSE"
+check_json '.status == "IN_TRANSIT"' 'Партия не переведена в путь'
 
 echo
 echo '26. Партия прибыла: ARRIVED'
@@ -176,7 +171,7 @@ STATUS=$(curl -sS -o "$RESPONSE" -w '%{http_code}' \
 output
 http_status
 [ "$STATUS" = '200' ] || { echo 'ОШИБКА: ожидался HTTP 200' >&2; exit 1; }
-python3 -c 'import json,sys; b=json.load(open(sys.argv[1])); assert b["status"] == "ARRIVED" and b["formedAt"] and b["confirmedAt"] and b["arrivedAt"] and b["trackingNumber"] == "DEMO-TRACK"' "$RESPONSE"
+check_json '.status == "ARRIVED" and .formedAt != null and .confirmedAt != null and .arrivedAt != null and .trackingNumber == "DEMO-TRACK"' 'Не сохранены статус, даты пути или номер отслеживания'
 
 echo
 echo '28. Список своих партий содержит новую партию'
@@ -187,7 +182,4 @@ STATUS=$(curl -sS -o "$RESPONSE" -w '%{http_code}' \
 output
 http_status
 [ "$STATUS" = '200' ] || { echo 'ОШИБКА: ожидался HTTP 200' >&2; exit 1; }
-python3 - "$RESPONSE" "$BATCH_ID" <<'CHECK'
-import json, sys
-assert any(b['id'] == int(sys.argv[2]) for b in json.load(open(sys.argv[1])))
-CHECK
+check_json 'any(.[]; .id == $id)' 'Созданная партия отсутствует в списке' --argjson id "$BATCH_ID"

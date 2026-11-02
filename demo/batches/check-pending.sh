@@ -18,3 +18,14 @@ STATUS=$(curl -sS -o "$RESPONSE" -w '%{http_code}' \
 output
 http_status
 [ "$STATUS" = '403' ] || { echo 'ОШИБКА: ожидался HTTP 403' >&2; exit 1; }
+
+echo
+echo '8.2. До активации добавление вида запрещено: HTTP 403'
+command_line "curl -sS -X POST $BASE_URL/api/depositors/me/species -b <applicant-cookies> -d '{\"latinName\":\"Demo pending\",\"localName\":\"Демо\"}'"
+STATUS=$(curl -sS -o "$RESPONSE" -w '%{http_code}' \
+    -X POST "$BASE_URL/api/depositors/me/species" \
+    -b "$APPLICANT_COOKIES" -H "$APPLICANT_CSRF_HEADER: $APPLICANT_CSRF_TOKEN" \
+    -H 'Content-Type: application/json' -d '{"latinName":"Demo pending","localName":"Демо"}')
+output
+http_status
+[ "$STATUS" = '403' ] || { echo 'ОШИБКА: ожидался HTTP 403' >&2; exit 1; }
