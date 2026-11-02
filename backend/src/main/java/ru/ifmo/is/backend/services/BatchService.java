@@ -18,7 +18,6 @@ import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -39,7 +38,7 @@ public class BatchService {
         Depositor depositor = activeDepositor(principal);
         Batch batch = new Batch();
         batch.setDepositor(depositor);
-        batch.setNumber("B-" + UUID.randomUUID().toString().replace("-", ""));
+        batch.setNumber(String.format(Locale.ROOT, "B-%06d", batches.nextNumber()));
         batch.setDesiredShipmentDate(data.desiredShipmentDate());
         batches.save(batch);
         saveContents(batch, data);
@@ -159,7 +158,7 @@ public class BatchService {
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Неизвестная страна")));
                 sample.setCollectionYear(passport.collectionYear().shortValue());
                 sample.setSeedQuantity(passport.seedQuantity());
-                sample.setAccessionCode("S-" + UUID.randomUUID().toString().replace("-", ""));
+                sample.setAccessionCode(String.format(Locale.ROOT, "S-%06d", samples.nextAccessionNumber()));
                 sample.setNote(passport.note());
                 samples.save(sample);
             }

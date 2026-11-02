@@ -9,6 +9,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import ru.ifmo.is.backend.security.AuthPrincipal;
 import ru.ifmo.is.backend.services.BatchService;
+import ru.ifmo.is.backend.services.IntakeService;
 import ru.ifmo.is.backend.services.BatchService.BatchData;
 import ru.ifmo.is.backend.services.BatchService.BatchView;
 
@@ -19,6 +20,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class DepositorBatchController {
     private final BatchService service;
+    private final IntakeService intakeService;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
@@ -34,6 +36,11 @@ public class DepositorBatchController {
     @GetMapping("/{id}")
     public BatchView get(@AuthenticationPrincipal AuthPrincipal principal, @PathVariable Long id) {
         return service.ownBatch(principal, id);
+    }
+
+    @GetMapping("/{id}/boxes")
+    public List<IntakeService.StoredBoxView> boxes(@AuthenticationPrincipal AuthPrincipal principal, @PathVariable Long id) {
+        return intakeService.ownBoxes(principal, id);
     }
 
     @PutMapping("/{id}")

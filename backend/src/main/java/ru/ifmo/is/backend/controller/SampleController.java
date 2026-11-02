@@ -6,6 +6,7 @@ import ru.ifmo.is.backend.repository.CountryRepository;
 import ru.ifmo.is.backend.repository.SpeciesRepository;
 import ru.ifmo.is.backend.repository.projections.SampleSearchProjection;
 import ru.ifmo.is.backend.services.SampleStorageService;
+import ru.ifmo.is.backend.services.SpeciesService.SpeciesView;
 
 import java.util.List;
 
@@ -35,6 +36,5 @@ public class SampleController {
                 .map(c -> new CountryView(c.getCode(), c.getName())).toList();
     }
 
-    public record SpeciesView(Long id, String latinName, String localName, String family) {}
     public record CountryView(String code, String name) {}
 }

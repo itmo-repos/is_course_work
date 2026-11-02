@@ -12,6 +12,9 @@ import java.util.List;
 import java.util.Optional;
 
 public interface BatchRepository extends JpaRepository<Batch, Long> {
+    @Query(value = "SELECT nextval('batch_number_seq')", nativeQuery = true)
+    long nextNumber();
+
     List<Batch> findAllByDepositor_IdOrderByFormedAtDesc(Long depositorId);
     List<Batch> findAllByStatusOrderByFormedAtAsc(BatchStatus status);
     List<Batch> findAllByOrderByFormedAtAsc();
