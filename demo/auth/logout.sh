@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Часть общего сценария: запускается через demo/check-backend.sh.
 
-echo '55. Выходим и проверяем отказ без авторизации: ожидаем HTTP 401'
+echo 'Завершение. Выходим и проверяем отказ без авторизации: ожидаем HTTP 401'
 command_line "curl -sS -X POST $BASE_URL/api/auth/logout -H '$APPLICANT_CSRF_HEADER: <csrf-токен>' -b <applicant-cookies>"
 STATUS=$(curl -sS -b "$APPLICANT_COOKIES" -c "$APPLICANT_COOKIES" -o "$RESPONSE" -w '%{http_code}' \
     -X POST "$BASE_URL/api/auth/logout" -H "$APPLICANT_CSRF_HEADER: $APPLICANT_CSRF_TOKEN")

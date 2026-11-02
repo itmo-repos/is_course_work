@@ -25,7 +25,11 @@ section 'Приём, размещение и перемещение коробо
 . "$DEMO_DIR/intake/check.sh"
 
 next_part
+section 'Заявки и сессии изъятия'
+. "$DEMO_DIR/withdrawal/check.sh"
+
+next_part
 section 'Выход и проверка закрытия сессий'
 . "$DEMO_DIR/auth/logout.sh"
 
-echo "Все проверки прошли. Демо-заявка $APPLICANT_ID оставлена в ACTIVE, партия $BATCH_ID — в PARTIALLY_PLACED (также проверены PLACED и WRITTEN_OFF)."
+echo "Все проверки прошли. Демо-заявка $APPLICANT_ID оставлена в ACTIVE, партия $BATCH_ID — PARTIALLY_PLACED; заявка на изъятие $WITHDRAWAL_ID — FULFILLED, коробка #$WITHDRAWAL_BOX_ID — WITHDRAWN."
