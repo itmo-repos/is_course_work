@@ -9,6 +9,7 @@ import ru.ifmo.is.backend.repository.projections.SampleSearchProjection;
 import java.util.List;
 
 public interface SampleRepository extends JpaRepository<Sample, Long> {
+    List<Sample> findAllByBox_IdOrderByIdAsc(Long boxId);
     @Query(value = "SELECT * FROM search_sample(:species, :country)", nativeQuery = true)
     List<SampleSearchProjection> searchSample(
             @Param("species") String speciesName,

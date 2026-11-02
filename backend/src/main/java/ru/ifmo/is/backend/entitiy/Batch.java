@@ -2,6 +2,8 @@ package ru.ifmo.is.backend.entitiy;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import ru.ifmo.is.backend.entitiy.enums.BatchStatus;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
@@ -24,7 +26,8 @@ public class Batch {
     private String number;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+    @Column(name = "status", nullable = false, columnDefinition = "batch_status")
     private BatchStatus status = BatchStatus.FORMED;
 
     @Column(name = "formed_at", nullable = false, updatable = false)

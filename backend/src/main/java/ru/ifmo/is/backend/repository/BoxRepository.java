@@ -6,7 +6,11 @@ import org.springframework.data.repository.query.Param;
 import ru.ifmo.is.backend.entitiy.Box;
 import ru.ifmo.is.backend.repository.projections.BatchBarcodeProjection;
 
+import java.util.List;
+
 public interface BoxRepository extends JpaRepository<Box, Long> {
+
+    List<Box> findAllByBatch_IdOrderBySeqNoAsc(Long batchId);
 
     @Query(value = "SELECT * FROM identify_batch_by_barcode(:barcode)", nativeQuery = true)
     BatchBarcodeProjection identifyBatchByBarcode(@Param("barcode") String barcode);
