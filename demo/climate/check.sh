@@ -54,6 +54,7 @@ http_status
 [ "$STATUS" = 403 ] || exit 1
 
 CLIMATE_FROM='2000-01-01T00:00:00Z'
+. "$DEMO_DIR/gateway/check.sh"
 CLIMATE_TO=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 
 echo 'Просматриваем последние показания камеры; без данных latestReading будет null'
