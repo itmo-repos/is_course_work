@@ -39,6 +39,7 @@ public class DepositorOnboardingService {
     private static final long MAX_SCAN_BYTES = 15L * 1024 * 1024;
 
     private final AccessService access;
+    private final DepositorAccessService depositorAccess;
     private final DepositorRepository depositorRepository;
     private final ContractRepository contractRepository;
     private final CountryRepository countryRepository;
@@ -82,19 +83,19 @@ public class DepositorOnboardingService {
 
     @Transactional(readOnly = true)
     public DepositorView getOwnProfile(AuthPrincipal principal) {
-        return view(requireOwnDepositor(principal));
+        return view(depositorAccess.current(principal));
     }
 
     @Transactional(readOnly = true)
     public StoredDocument getOwnContract(AuthPrincipal principal) {
-        Depositor depositor = requireOwnDepositor(principal);
+        Depositor depositor = depositorAccess.current(principal);
         latestContract(depositor.getId());
         return new StoredDocument(contractDocumentService.readTemplate(), "contract.pdf", "application/pdf");
     }
 
     @Transactional
     public DepositorView uploadSignedContract(AuthPrincipal principal, MultipartFile upload) {
-        Depositor depositor = lockOwnDepositor(principal);
+        Depositor depositor = depositorAccess.lockCurrent(principal);
         requireStatus(depositor, DepositorStatus.AWAITING_CONTRACT);
         Contract contract = latestContract(depositor.getId());
         if (contract.getStatus() != ContractStatus.GENERATED) {
@@ -238,17 +239,6 @@ public class DepositorOnboardingService {
         contract.setGeneratedAt(OffsetDateTime.now());
         contract.setUpdatedAt(OffsetDateTime.now());
         return contract;
-    }
-
-    private Depositor requireOwnDepositor(AuthPrincipal principal) {
-        access.requireDepositor(principal);
-        return depositorRepository.findById(principal.id())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Депозитор не найден"));
-    }
-
-    private Depositor lockOwnDepositor(AuthPrincipal principal) {
-        access.requireDepositor(principal);
-        return lockDepositor(principal.id());
     }
 
     private Depositor lockDepositor(Long id) {

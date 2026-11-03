@@ -31,7 +31,8 @@ public class BatchService {
     private final BatchRepository batches;
     private final BoxRepository boxes;
     private final SampleRepository samples;
-    private final DepositorRepository depositors;
+    private final DepositorAccessService depositorAccess;
+    private final BatchAccessService batchAccess;
     private final SpeciesRepository species;
     private final CountryRepository countries;
     private final AccessService access;
@@ -40,7 +41,7 @@ public class BatchService {
 
     @Transactional
     public BatchView create(AuthPrincipal principal, BatchData data) {
-        Depositor depositor = activeDepositor(principal);
+        Depositor depositor = depositorAccess.lockActive(principal);
         Batch batch = new Batch();
         batch.setDepositor(depositor);
         batch.setNumber(String.format(Locale.ROOT, "B-%06d", batches.nextNumber()));
@@ -56,7 +57,7 @@ public class BatchService {
     }
 
     public BatchView ownBatch(AuthPrincipal principal, Long id) {
-        return view(ownedBatch(principal, id));
+        return view(batchAccess.owned(principal, id));
     }
 
     public List<BatchView> curatorBatches(AuthPrincipal principal, BatchStatus status) {
@@ -67,13 +68,13 @@ public class BatchService {
 
     public BatchView curatorBatch(AuthPrincipal principal, Long id) {
         access.requireRole(principal, RoleCode.CURATOR);
-        return view(findBatch(id));
+        return view(batchAccess.find(id));
     }
 
     @Transactional
     public BatchView confirm(AuthPrincipal principal, Long id) {
         Employee curator = access.requireEmployee(principal, RoleCode.CURATOR);
-        Batch batch = lockBatch(id);
+        Batch batch = batchAccess.lock(id);
         requireStatus(batch, BatchStatus.FORMED);
         if (batch.getDepositor().getStatus() != DepositorStatus.ACTIVE) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Депозитор больше не активен");
@@ -84,13 +85,13 @@ public class BatchService {
         // UPDATE запускает SQL-триггер, заполняющий barcode коробок.
         batches.flush();
         entityManager.clear();
-        return view(findBatch(id));
+        return view(batchAccess.find(id));
     }
 
     @Transactional
     public BatchView reject(AuthPrincipal principal, Long id, String reason) {
         access.requireRole(principal, RoleCode.CURATOR);
-        Batch batch = lockBatch(id);
+        Batch batch = batchAccess.lock(id);
         requireStatus(batch, BatchStatus.FORMED);
         batch.setStatus(BatchStatus.REJECTED);
         batch.setRejectionReason(reason.strip());
@@ -99,9 +100,8 @@ public class BatchService {
 
     @Transactional
     public BatchView resubmit(AuthPrincipal principal, Long id, BatchData data) {
-        activeDepositor(principal);
-        Batch batch = lockBatch(id);
-        checkOwner(principal, batch);
+        depositorAccess.lockActive(principal);
+        Batch batch = batchAccess.lockOwned(principal, id);
         requireStatus(batch, BatchStatus.REJECTED);
         for (Box box : boxes.findAllByBatch_IdOrderBySeqNoAsc(id)) {
             samples.deleteAll(samples.findAllByBox_IdOrderByIdAsc(box.getId()));
@@ -118,7 +118,7 @@ public class BatchService {
     @Transactional
     public BatchView tracking(AuthPrincipal principal, Long id, BatchStatus status, String trackingNumber) {
         access.requireRole(principal, RoleCode.CURATOR);
-        Batch batch = lockBatch(id);
+        Batch batch = batchAccess.lock(id);
         if (status == BatchStatus.IN_TRANSIT) {
             requireStatus(batch, BatchStatus.CONFIRMED);
         } else if (status == BatchStatus.ARRIVED) {
@@ -135,7 +135,7 @@ public class BatchService {
     }
 
     public String barcode(AuthPrincipal principal, Long batchId, Long boxId) {
-        Batch batch = ownedBatch(principal, batchId);
+        Batch batch = batchAccess.owned(principal, batchId);
         Box box = boxes.findById(boxId).filter(b -> b.getBatch().getId().equals(batch.getId()))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Коробка не найдена"));
         if (box.getBarcode() == null) {
@@ -213,38 +213,6 @@ public class BatchService {
                 batch.getRejectionReason(),
                 boxViews.size(),
                 boxViews);
-    }
-
-    private Depositor activeDepositor(AuthPrincipal principal) {
-        access.requireDepositor(principal);
-        Depositor depositor = depositors.findByIdForUpdate(principal.id()).orElseThrow(() ->
-                new ResponseStatusException(HttpStatus.NOT_FOUND, "Депозитор не найден"));
-        if (depositor.getStatus() != DepositorStatus.ACTIVE) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Для формирования партии нужен активный договор");
-        }
-        return depositor;
-    }
-
-    private Batch ownedBatch(AuthPrincipal principal, Long id) {
-        access.requireDepositor(principal);
-        Batch batch = findBatch(id);
-        checkOwner(principal, batch);
-        return batch;
-    }
-
-    private void checkOwner(AuthPrincipal principal, Batch batch) {
-        if (!batch.getDepositor().getId().equals(principal.id())) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Партия не найдена");
-        }
-    }
-
-    private Batch findBatch(Long id) {
-        return batches.findById(id).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Партия не найдена"));
-    }
-
-    private Batch lockBatch(Long id) {
-        return batches.findByIdForUpdate(id).orElseThrow(() ->
-                new ResponseStatusException(HttpStatus.NOT_FOUND, "Партия не найдена"));
     }
 
     private void requireStatus(Batch batch, BatchStatus status) {

@@ -14,6 +14,7 @@ import ru.ifmo.is.backend.dto.storage.StoragePlaceView;
 import ru.ifmo.is.backend.dto.storage.StoredBoxView;
 import ru.ifmo.is.backend.entitiy.*;
 import ru.ifmo.is.backend.entitiy.enums.*;
+import ru.ifmo.is.backend.mapper.StoragePlaceMapper;
 import ru.ifmo.is.backend.repository.*;
 import ru.ifmo.is.backend.security.AccessService;
 import ru.ifmo.is.backend.security.AuthPrincipal;
@@ -28,6 +29,8 @@ import java.util.List;
 @Transactional(readOnly = true)
 public class IntakeService {
     private final BatchRepository batches;
+    private final BatchAccessService batchAccess;
+    private final StoragePlaceMapper placeMapper;
     private final BoxRepository boxes;
     private final IntakeSessionRepository sessions;
     private final StoragePlaceRepository places;
@@ -45,7 +48,7 @@ public class IntakeService {
     public BatchIdentificationView arrive(AuthPrincipal principal, String barcode) {
         access.requireRole(principal, RoleCode.CURATOR);
         Long batchId = boxStorage.getBatchByBarcode(barcode.strip()).batchId();
-        Batch batch = lockBatch(batchId);
+        Batch batch = batchAccess.lock(batchId);
         if (batch.getStatus() != BatchStatus.ARRIVED) {
             throw conflict("Для досмотра партия должна быть в статусе ARRIVED");
         }
@@ -75,7 +78,7 @@ public class IntakeService {
     @Transactional
     public IntakeSessionView createSession(AuthPrincipal principal, Long batchId, Long chamberId, LocalDate plannedDate) {
         Employee curator = access.requireEmployee(principal, RoleCode.CURATOR);
-        Batch batch = lockBatch(batchId);
+        Batch batch = batchAccess.lock(batchId);
         requireBeforeInspection(batch);
         if (sessions.existsByBatch_Id(batchId)) {
             throw conflict("У партии уже есть сессия приёма");
@@ -96,7 +99,7 @@ public class IntakeService {
         access.requireRole(principal, RoleCode.CURATOR);
         Long batchId = sessions.findBatchIdById(id).orElseThrow(() ->
                 new ResponseStatusException(HttpStatus.NOT_FOUND, "Сессия приёма не найдена"));
-        Batch batch = lockBatch(batchId);
+        Batch batch = batchAccess.lock(batchId);
         requireBeforeInspection(batch);
         IntakeSession session = sessionFor(batch);
         if (session.getStatus() != SessionStatus.PLANNED) {
@@ -155,7 +158,7 @@ public class IntakeService {
         }
         List<StoragePlaceView> result = new ArrayList<>();
         for (StoragePlace place : places.findFreePlaces(chamberId)) {
-            result.add(placeView(place));
+            result.add(placeMapper.view(place));
         }
         return result;
     }
@@ -237,12 +240,7 @@ public class IntakeService {
     }
 
     public List<StoredBoxView> ownBoxes(AuthPrincipal principal, Long batchId) {
-        access.requireDepositor(principal);
-        Batch batch = batches.findById(batchId).orElseThrow(() ->
-                new ResponseStatusException(HttpStatus.NOT_FOUND, "Партия не найдена"));
-        if (!batch.getDepositor().getId().equals(principal.id())) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Партия не найдена");
-        }
+        batchAccess.owned(principal, batchId);
         List<StoredBoxView> result = new ArrayList<>();
         for (Box box : boxes.findAllByBatch_IdOrderBySeqNoAsc(batchId)) {
             result.add(boxView(box, false));
@@ -277,16 +275,11 @@ public class IntakeService {
         session.setCompletedAt(OffsetDateTime.now());
     }
 
-    private Batch lockBatch(Long batchId) {
-        return batches.findByIdForUpdate(batchId).orElseThrow(() ->
-                new ResponseStatusException(HttpStatus.NOT_FOUND, "Партия не найдена"));
-    }
-
     private Box lockBox(Long boxId) {
         // Сначала читаем только ID партии: сущность коробки загружаем уже после блокировки.
         Long batchId = boxes.findBatchIdById(boxId).orElseThrow(() ->
                 new ResponseStatusException(HttpStatus.NOT_FOUND, "Коробка не найдена"));
-        lockBatch(batchId);
+        batchAccess.lock(batchId);
         return boxes.findById(boxId).orElseThrow(() ->
                 new ResponseStatusException(HttpStatus.NOT_FOUND, "Коробка не найдена"));
     }
@@ -351,15 +344,10 @@ public class IntakeService {
     private StoredBoxView boxView(Box box, boolean curator) {
         StoragePlaceView location = null;
         if (box.getStoragePlace() != null && (curator || box.getStatus() == BoxStatus.PLACED)) {
-            location = placeView(box.getStoragePlace());
+            location = placeMapper.view(box.getStoragePlace());
         }
         return new StoredBoxView(box.getId(), box.getSeqNo(), box.getBarcode(), box.getStatus(),
                 box.getWriteOffReason(), box.getPlacedAt(), location);
-    }
-
-    private StoragePlaceView placeView(StoragePlace place) {
-        return new StoragePlaceView(place.getId(), place.getChamber().getId(), place.getChamber().getCode(),
-                place.getRackNo(), place.getShelfNo(), place.getRowNo());
     }
 
     private ResponseStatusException conflict(String message) {

@@ -13,6 +13,7 @@ import ru.ifmo.is.backend.dto.withdrawal.WithdrawalSessionSummary;
 import ru.ifmo.is.backend.dto.withdrawal.WithdrawalSessionView;
 import ru.ifmo.is.backend.entitiy.*;
 import ru.ifmo.is.backend.entitiy.enums.*;
+import ru.ifmo.is.backend.mapper.StoragePlaceMapper;
 import ru.ifmo.is.backend.repository.*;
 import ru.ifmo.is.backend.security.AccessService;
 import ru.ifmo.is.backend.security.AuthPrincipal;
@@ -30,7 +31,8 @@ import java.util.Set;
 public class WithdrawalService {
     private final WithdrawalRequestRepository requests;
     private final WithdrawalSessionRepository sessions;
-    private final BatchRepository batches;
+    private final BatchAccessService batchAccess;
+    private final StoragePlaceMapper placeMapper;
     private final BoxRepository boxes;
     private final AccessService access;
     private final ContractRepository contracts;
@@ -38,9 +40,7 @@ public class WithdrawalService {
 
     @Transactional
     public WithdrawalRequestView submit(AuthPrincipal principal, Long batchId, List<Long> boxIds, String reason, LocalDate desiredDate) {
-        access.requireDepositor(principal);
-        Batch batch = lockBatch(batchId);
-        checkOwner(principal, batch.getDepositor().getId());
+        Batch batch = batchAccess.lockOwned(principal, batchId);
         if (batch.getDepositor().getStatus() != DepositorStatus.ACTIVE) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Подавать заявку может только активный депозитор");
         }
@@ -280,17 +280,13 @@ public class WithdrawalService {
         if (session.getStatus() != SessionStatus.PLANNED) throw conflict("Сессия уже завершена или отменена");
     }
 
-    private Batch lockBatch(Long id) {
-        return batches.findByIdForUpdate(id).orElseThrow(() -> notFound("Партия"));
-    }
-
     private WithdrawalRequest findRequest(Long id) {
         return requests.findById(id).orElseThrow(() -> notFound("Заявка"));
     }
 
     private WithdrawalRequest lockRequest(Long id) {
         Long batchId = requests.findBatchIdById(id).orElseThrow(() -> notFound("Заявка"));
-        lockBatch(batchId);
+        batchAccess.lock(batchId);
         return findRequest(id);
     }
 
@@ -300,7 +296,7 @@ public class WithdrawalService {
 
     private WithdrawalSession lockSession(Long id) {
         Long batchId = sessions.findBatchIdById(id).orElseThrow(() -> notFound("Сессия"));
-        lockBatch(batchId);
+        batchAccess.lock(batchId);
         return findSession(id);
     }
 
@@ -331,9 +327,7 @@ public class WithdrawalService {
         for (Box box : selected) {
             StoragePlaceView location = null;
             if (box.getStatus() == BoxStatus.PLACED && box.getStoragePlace() != null) {
-                StoragePlace place = box.getStoragePlace();
-                location = new StoragePlaceView(place.getId(), place.getChamber().getId(),
-                        place.getChamber().getCode(), place.getRackNo(), place.getShelfNo(), place.getRowNo());
+                location = placeMapper.view(box.getStoragePlace());
             }
             result.add(new WithdrawalBoxView(box.getId(), box.getSeqNo(), box.getBarcode(), box.getStatus(),
                     location, box.getWithdrawnAt()));

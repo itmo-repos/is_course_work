@@ -7,30 +7,20 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import ru.ifmo.is.backend.dto.species.SpeciesView;
-import ru.ifmo.is.backend.entitiy.Depositor;
 import ru.ifmo.is.backend.entitiy.Species;
-import ru.ifmo.is.backend.entitiy.enums.DepositorStatus;
-import ru.ifmo.is.backend.repository.DepositorRepository;
 import ru.ifmo.is.backend.repository.SpeciesRepository;
-import ru.ifmo.is.backend.security.AccessService;
 import ru.ifmo.is.backend.security.AuthPrincipal;
 
 @Service
 @RequiredArgsConstructor
 public class SpeciesService {
-    private final AccessService access;
+    private final DepositorAccessService depositorAccess;
     private final SpeciesRepository species;
-    private final DepositorRepository depositors;
     private final JdbcTemplate jdbc;
 
     @Transactional
     public SpeciesView create(AuthPrincipal principal, String latinName, String localName, String family) {
-        access.requireDepositor(principal);
-        Depositor depositor = depositors.findByIdForUpdate(principal.id()).orElseThrow(() ->
-                new ResponseStatusException(HttpStatus.NOT_FOUND, "Депозитор не найден"));
-        if (depositor.getStatus() != DepositorStatus.ACTIVE) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Для добавления вида нужен активный договор");
-        }
+        depositorAccess.lockActive(principal);
         latinName = normalize(latinName);
         localName = normalize(localName);
         family = family == null || family.isBlank() ? null : normalize(family);
