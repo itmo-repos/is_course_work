@@ -1,18 +1,23 @@
 package ru.ifmo.is.backend.controller;
 
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-import ru.ifmo.is.backend.repository.projections.BatchBarcodeProjection;
+import ru.ifmo.is.backend.dto.batch.BatchIdentificationView;
+import ru.ifmo.is.backend.dto.common.ReasonRequest;
+import ru.ifmo.is.backend.dto.storage.ChamberMapView;
+import ru.ifmo.is.backend.dto.storage.ChamberView;
+import ru.ifmo.is.backend.dto.storage.IntakeSessionRequest;
+import ru.ifmo.is.backend.dto.storage.IntakeSessionView;
+import ru.ifmo.is.backend.dto.storage.StoragePlaceRequest;
+import ru.ifmo.is.backend.dto.storage.StoragePlaceView;
+import ru.ifmo.is.backend.dto.storage.StoredBoxView;
 import ru.ifmo.is.backend.security.AuthPrincipal;
-import ru.ifmo.is.backend.services.IntakeService;
 import ru.ifmo.is.backend.services.ChamberMapService;
-import ru.ifmo.is.backend.services.IntakeService.*;
+import ru.ifmo.is.backend.services.IntakeService;
 
-import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -23,30 +28,30 @@ public class CuratorIntakeController {
     private final ChamberMapService chamberMapService;
 
     @GetMapping("/batches/by-barcode/{barcode}")
-    public BatchBarcodeProjection identify(@AuthenticationPrincipal AuthPrincipal principal, @PathVariable String barcode) {
+    public BatchIdentificationView identify(@AuthenticationPrincipal AuthPrincipal principal, @PathVariable String barcode) {
         return service.identify(principal, barcode);
     }
 
     @PostMapping("/batches/by-barcode/{barcode}/arrive")
-    public BatchBarcodeProjection arrive(@AuthenticationPrincipal AuthPrincipal principal, @PathVariable String barcode) {
+    public BatchIdentificationView arrive(@AuthenticationPrincipal AuthPrincipal principal, @PathVariable String barcode) {
         return service.arrive(principal, barcode);
     }
 
     @PostMapping("/batches/{id}/intake-sessions")
     @ResponseStatus(HttpStatus.CREATED)
-    public SessionView create(@AuthenticationPrincipal AuthPrincipal principal, @PathVariable Long id,
-                               @Valid @RequestBody SessionRequest request) {
+    public IntakeSessionView create(@AuthenticationPrincipal AuthPrincipal principal, @PathVariable Long id,
+                               @Valid @RequestBody IntakeSessionRequest request) {
         return service.createSession(principal, id, request.chamberId(), request.plannedDate());
     }
 
     @PatchMapping("/intake-sessions/{id}")
-    public SessionView update(@AuthenticationPrincipal AuthPrincipal principal, @PathVariable Long id,
-                              @Valid @RequestBody SessionRequest request) {
+    public IntakeSessionView update(@AuthenticationPrincipal AuthPrincipal principal, @PathVariable Long id,
+                              @Valid @RequestBody IntakeSessionRequest request) {
         return service.updateSession(principal, id, request.chamberId(), request.plannedDate());
     }
 
     @GetMapping("/intake-sessions/{id}")
-    public SessionView session(@AuthenticationPrincipal AuthPrincipal principal, @PathVariable Long id) {
+    public IntakeSessionView session(@AuthenticationPrincipal AuthPrincipal principal, @PathVariable Long id) {
         return service.getSession(principal, id);
     }
 
@@ -57,18 +62,18 @@ public class CuratorIntakeController {
     }
 
     @GetMapping("/chambers/{id}/places")
-    public ChamberMapService.ChamberMapView places(@AuthenticationPrincipal AuthPrincipal principal, @PathVariable Long id) {
+    public ChamberMapView places(@AuthenticationPrincipal AuthPrincipal principal, @PathVariable Long id) {
         return chamberMapService.getMap(principal, id);
     }
 
     @GetMapping("/chambers/{id}/free-places")
-    public List<PlaceView> freePlaces(@AuthenticationPrincipal AuthPrincipal principal, @PathVariable Long id) {
+    public List<StoragePlaceView> freePlaces(@AuthenticationPrincipal AuthPrincipal principal, @PathVariable Long id) {
         return service.freePlaces(principal, id);
     }
 
     @PatchMapping("/boxes/{id}/storage-place")
     public StoredBoxView changePlace(@AuthenticationPrincipal AuthPrincipal principal, @PathVariable Long id,
-                                     @Valid @RequestBody PlaceRequest request) {
+                                     @Valid @RequestBody StoragePlaceRequest request) {
         return service.changePlace(principal, id, request.storagePlaceId());
     }
 
@@ -85,11 +90,7 @@ public class CuratorIntakeController {
 
     @PostMapping("/boxes/{id}/move")
     public StoredBoxView move(@AuthenticationPrincipal AuthPrincipal principal, @PathVariable Long id,
-                              @Valid @RequestBody PlaceRequest request) {
+                              @Valid @RequestBody StoragePlaceRequest request) {
         return service.move(principal, id, request.storagePlaceId());
     }
-
-    public record SessionRequest(@NotNull @Positive Long chamberId, @NotNull @FutureOrPresent LocalDate plannedDate) {}
-    public record PlaceRequest(@NotNull @Positive Long storagePlaceId) {}
-    public record ReasonRequest(@NotBlank @Size(max = 2000) String reason) {}
 }

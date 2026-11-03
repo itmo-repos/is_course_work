@@ -1,16 +1,21 @@
 package ru.ifmo.is.backend.services;
 
 import jakarta.persistence.EntityManager;
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import ru.ifmo.is.backend.dto.batch.BatchData;
+import ru.ifmo.is.backend.dto.batch.BatchView;
+import ru.ifmo.is.backend.dto.batch.BoxData;
+import ru.ifmo.is.backend.dto.batch.BoxView;
+import ru.ifmo.is.backend.dto.batch.SampleData;
+import ru.ifmo.is.backend.dto.batch.SampleView;
 import ru.ifmo.is.backend.entitiy.*;
 import ru.ifmo.is.backend.entitiy.enums.*;
 import ru.ifmo.is.backend.repository.*;
+import ru.ifmo.is.backend.security.AccessService;
 import ru.ifmo.is.backend.security.AuthPrincipal;
 
 import java.time.LocalDate;
@@ -29,7 +34,7 @@ public class BatchService {
     private final DepositorRepository depositors;
     private final SpeciesRepository species;
     private final CountryRepository countries;
-    private final EmployeeRepository employees;
+    private final AccessService access;
     private final EntityManager entityManager;
     private final BarcodeService barcodeService;
 
@@ -46,7 +51,7 @@ public class BatchService {
     }
 
     public List<BatchView> ownBatches(AuthPrincipal principal) {
-        requireDepositor(principal);
+        access.requireDepositor(principal);
         return batches.findAllByDepositor_IdOrderByFormedAtDesc(principal.id()).stream().map(this::view).toList();
     }
 
@@ -55,19 +60,19 @@ public class BatchService {
     }
 
     public List<BatchView> curatorBatches(AuthPrincipal principal, BatchStatus status) {
-        requireCurator(principal);
+        access.requireRole(principal, RoleCode.CURATOR);
         return (status == null ? batches.findAllByOrderByFormedAtAsc()
                 : batches.findAllByStatusOrderByFormedAtAsc(status)).stream().map(this::view).toList();
     }
 
     public BatchView curatorBatch(AuthPrincipal principal, Long id) {
-        requireCurator(principal);
+        access.requireRole(principal, RoleCode.CURATOR);
         return view(findBatch(id));
     }
 
     @Transactional
     public BatchView confirm(AuthPrincipal principal, Long id) {
-        Employee curator = requireCurator(principal);
+        Employee curator = access.requireEmployee(principal, RoleCode.CURATOR);
         Batch batch = lockBatch(id);
         requireStatus(batch, BatchStatus.FORMED);
         if (batch.getDepositor().getStatus() != DepositorStatus.ACTIVE) {
@@ -84,7 +89,7 @@ public class BatchService {
 
     @Transactional
     public BatchView reject(AuthPrincipal principal, Long id, String reason) {
-        requireCurator(principal);
+        access.requireRole(principal, RoleCode.CURATOR);
         Batch batch = lockBatch(id);
         requireStatus(batch, BatchStatus.FORMED);
         batch.setStatus(BatchStatus.REJECTED);
@@ -112,7 +117,7 @@ public class BatchService {
 
     @Transactional
     public BatchView tracking(AuthPrincipal principal, Long id, BatchStatus status, String trackingNumber) {
-        requireCurator(principal);
+        access.requireRole(principal, RoleCode.CURATOR);
         Batch batch = lockBatch(id);
         if (status == BatchStatus.IN_TRANSIT) {
             requireStatus(batch, BatchStatus.CONFIRMED);
@@ -211,7 +216,7 @@ public class BatchService {
     }
 
     private Depositor activeDepositor(AuthPrincipal principal) {
-        requireDepositor(principal);
+        access.requireDepositor(principal);
         Depositor depositor = depositors.findByIdForUpdate(principal.id()).orElseThrow(() ->
                 new ResponseStatusException(HttpStatus.NOT_FOUND, "Депозитор не найден"));
         if (depositor.getStatus() != DepositorStatus.ACTIVE) {
@@ -220,23 +225,8 @@ public class BatchService {
         return depositor;
     }
 
-    private void requireDepositor(AuthPrincipal principal) {
-        if (principal == null || principal.type() != AuthPrincipal.AccountType.DEPOSITOR) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Доступ только депозитору");
-        }
-    }
-
-    private Employee requireCurator(AuthPrincipal principal) {
-        if (principal == null || principal.type() != AuthPrincipal.AccountType.EMPLOYEE
-                || !employees.hasRole(principal.id(), "CURATOR")) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Доступ только куратору");
-        }
-        return employees.findById(principal.id()).orElseThrow(() ->
-                new ResponseStatusException(HttpStatus.FORBIDDEN, "Сотрудник не найден"));
-    }
-
     private Batch ownedBatch(AuthPrincipal principal, Long id) {
-        requireDepositor(principal);
+        access.requireDepositor(principal);
         Batch batch = findBatch(id);
         checkOwner(principal, batch);
         return batch;
@@ -262,19 +252,4 @@ public class BatchService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Ожидался статус " + status + ", текущий: " + batch.getStatus());
         }
     }
-
-    public record BatchData(@NotNull @FutureOrPresent LocalDate desiredShipmentDate,
-                            @NotEmpty @Size(max = 100) List<@NotNull @Valid BoxData> boxes) {}
-    public record BoxData(@NotEmpty @Size(max = 100) List<@NotNull @Valid SampleData> samples) {}
-    public record SampleData(@NotNull @Positive Long speciesId,
-                             @NotBlank @Pattern(regexp = "[A-Za-z]{2}") String originCountryCode,
-                             @NotNull @Min(1850) @Max(2900) Integer collectionYear,
-                             @NotNull @Positive Integer seedQuantity, @Size(max = 5000) String note) {}
-    public record BatchView(Long id, String number, Long depositorId, BatchStatus status,
-                            LocalDate desiredShipmentDate, OffsetDateTime formedAt, OffsetDateTime confirmedAt,
-                            OffsetDateTime arrivedAt, String trackingNumber, String rejectionReason,
-                            int boxCount, List<BoxView> boxes) {}
-    public record BoxView(Long id, short seqNo, BoxStatus status, String barcode, List<SampleView> samples) {}
-    public record SampleView(Long id, String accessionCode, Long speciesId, String latinName,
-                             String originCountryCode, short collectionYear, int seedQuantity, String note) {}
 }

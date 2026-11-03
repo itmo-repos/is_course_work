@@ -6,9 +6,15 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import ru.ifmo.is.backend.dto.storage.StoragePlaceView;
+import ru.ifmo.is.backend.dto.withdrawal.WithdrawalBoxView;
+import ru.ifmo.is.backend.dto.withdrawal.WithdrawalRequestView;
+import ru.ifmo.is.backend.dto.withdrawal.WithdrawalSessionSummary;
+import ru.ifmo.is.backend.dto.withdrawal.WithdrawalSessionView;
 import ru.ifmo.is.backend.entitiy.*;
 import ru.ifmo.is.backend.entitiy.enums.*;
 import ru.ifmo.is.backend.repository.*;
+import ru.ifmo.is.backend.security.AccessService;
 import ru.ifmo.is.backend.security.AuthPrincipal;
 
 import java.time.LocalDate;
@@ -26,13 +32,13 @@ public class WithdrawalService {
     private final WithdrawalSessionRepository sessions;
     private final BatchRepository batches;
     private final BoxRepository boxes;
-    private final EmployeeRepository employees;
+    private final AccessService access;
     private final ContractRepository contracts;
     private final EntityManager entityManager;
 
     @Transactional
-    public RequestView submit(AuthPrincipal principal, Long batchId, List<Long> boxIds, String reason, LocalDate desiredDate) {
-        requireDepositor(principal);
+    public WithdrawalRequestView submit(AuthPrincipal principal, Long batchId, List<Long> boxIds, String reason, LocalDate desiredDate) {
+        access.requireDepositor(principal);
         Batch batch = lockBatch(batchId);
         checkOwner(principal, batch.getDepositor().getId());
         if (batch.getDepositor().getStatus() != DepositorStatus.ACTIVE) {
@@ -67,45 +73,45 @@ public class WithdrawalService {
         return requestView(request);
     }
 
-    public List<RequestView> ownRequests(AuthPrincipal principal) {
-        requireDepositor(principal);
-        List<RequestView> result = new ArrayList<>();
+    public List<WithdrawalRequestView> ownRequests(AuthPrincipal principal) {
+        access.requireDepositor(principal);
+        List<WithdrawalRequestView> result = new ArrayList<>();
         for (WithdrawalRequest request : requests.findAllByDepositor_IdOrderBySubmittedAtDesc(principal.id())) {
             result.add(requestView(request));
         }
         return result;
     }
 
-    public RequestView ownRequest(AuthPrincipal principal, Long id) {
-        requireDepositor(principal);
+    public WithdrawalRequestView ownRequest(AuthPrincipal principal, Long id) {
+        access.requireDepositor(principal);
         WithdrawalRequest request = findRequest(id);
         checkOwner(principal, request.getDepositor().getId());
         return requestView(request);
     }
 
-    public List<RequestView> curatorRequests(AuthPrincipal principal, WithdrawalStatus status) {
-        requireEmployee(principal, "CURATOR");
+    public List<WithdrawalRequestView> curatorRequests(AuthPrincipal principal, WithdrawalStatus status) {
+        access.requireRole(principal, RoleCode.CURATOR);
         return listRequests(status);
     }
 
-    public RequestView curatorRequest(AuthPrincipal principal, Long id) {
-        requireEmployee(principal, "CURATOR");
+    public WithdrawalRequestView curatorRequest(AuthPrincipal principal, Long id) {
+        access.requireRole(principal, RoleCode.CURATOR);
         return requestView(findRequest(id));
     }
 
-    public List<RequestView> adminRequests(AuthPrincipal principal, WithdrawalStatus status) {
-        requireEmployee(principal, "ADMIN");
+    public List<WithdrawalRequestView> adminRequests(AuthPrincipal principal, WithdrawalStatus status) {
+        access.requireRole(principal, RoleCode.ADMIN);
         return listRequests(status);
     }
 
-    public RequestView adminRequest(AuthPrincipal principal, Long id) {
-        requireEmployee(principal, "ADMIN");
+    public WithdrawalRequestView adminRequest(AuthPrincipal principal, Long id) {
+        access.requireRole(principal, RoleCode.ADMIN);
         return requestView(findRequest(id));
     }
 
     @Transactional
-    public RequestView beginReview(AuthPrincipal principal, Long id) {
-        Employee curator = requireEmployee(principal, "CURATOR");
+    public WithdrawalRequestView beginReview(AuthPrincipal principal, Long id) {
+        Employee curator = access.requireEmployee(principal, RoleCode.CURATOR);
         WithdrawalRequest request = lockRequest(id);
         requireStatus(request, WithdrawalStatus.SUBMITTED);
         request.setCurator(curator);
@@ -114,8 +120,8 @@ public class WithdrawalService {
     }
 
     @Transactional
-    public RequestView curatorApprove(AuthPrincipal principal, Long id) {
-        Employee curator = requireEmployee(principal, "CURATOR");
+    public WithdrawalRequestView curatorApprove(AuthPrincipal principal, Long id) {
+        Employee curator = access.requireEmployee(principal, RoleCode.CURATOR);
         WithdrawalRequest request = lockRequest(id);
         requireStatus(request, WithdrawalStatus.CURATOR_REVIEW);
         validateForWithdrawal(request);
@@ -126,8 +132,8 @@ public class WithdrawalService {
     }
 
     @Transactional
-    public RequestView curatorReject(AuthPrincipal principal, Long id, String reason) {
-        Employee curator = requireEmployee(principal, "CURATOR");
+    public WithdrawalRequestView curatorReject(AuthPrincipal principal, Long id, String reason) {
+        Employee curator = access.requireEmployee(principal, RoleCode.CURATOR);
         WithdrawalRequest request = lockRequest(id);
         requireStatus(request, WithdrawalStatus.CURATOR_REVIEW);
         request.setCurator(curator);
@@ -138,8 +144,8 @@ public class WithdrawalService {
     }
 
     @Transactional
-    public RequestView adminApprove(AuthPrincipal principal, Long id) {
-        Employee admin = requireEmployee(principal, "ADMIN");
+    public WithdrawalRequestView adminApprove(AuthPrincipal principal, Long id) {
+        Employee admin = access.requireEmployee(principal, RoleCode.ADMIN);
         WithdrawalRequest request = lockRequest(id);
         requireStatus(request, WithdrawalStatus.LEGAL_APPROVAL);
         validateForWithdrawal(request);
@@ -150,8 +156,8 @@ public class WithdrawalService {
     }
 
     @Transactional
-    public RequestView adminReject(AuthPrincipal principal, Long id, String reason) {
-        Employee admin = requireEmployee(principal, "ADMIN");
+    public WithdrawalRequestView adminReject(AuthPrincipal principal, Long id, String reason) {
+        Employee admin = access.requireEmployee(principal, RoleCode.ADMIN);
         WithdrawalRequest request = lockRequest(id);
         requireStatus(request, WithdrawalStatus.LEGAL_APPROVAL);
         request.setAdmin(admin);
@@ -162,8 +168,8 @@ public class WithdrawalService {
     }
 
     @Transactional
-    public SessionView planSession(AuthPrincipal principal, Long requestId, LocalDate plannedDate) {
-        Employee curator = requireEmployee(principal, "CURATOR");
+    public WithdrawalSessionView planSession(AuthPrincipal principal, Long requestId, LocalDate plannedDate) {
+        Employee curator = access.requireEmployee(principal, RoleCode.CURATOR);
         WithdrawalRequest request = lockRequest(requestId);
         requireStatus(request, WithdrawalStatus.APPROVED);
         validateForWithdrawal(request);
@@ -179,14 +185,14 @@ public class WithdrawalService {
         return sessionView(session);
     }
 
-    public SessionView getSession(AuthPrincipal principal, Long id) {
-        requireEmployee(principal, "CURATOR");
+    public WithdrawalSessionView getSession(AuthPrincipal principal, Long id) {
+        access.requireRole(principal, RoleCode.CURATOR);
         return sessionView(findSession(id));
     }
 
     @Transactional
-    public SessionView reschedule(AuthPrincipal principal, Long id, LocalDate plannedDate) {
-        requireEmployee(principal, "CURATOR");
+    public WithdrawalSessionView reschedule(AuthPrincipal principal, Long id, LocalDate plannedDate) {
+        access.requireRole(principal, RoleCode.CURATOR);
         WithdrawalSession session = lockSession(id);
         requirePlanned(session);
         requireStatus(session.getRequest(), WithdrawalStatus.APPROVED);
@@ -196,8 +202,8 @@ public class WithdrawalService {
     }
 
     @Transactional
-    public SessionView complete(AuthPrincipal principal, Long id) {
-        requireEmployee(principal, "CURATOR");
+    public WithdrawalSessionView complete(AuthPrincipal principal, Long id) {
+        access.requireRole(principal, RoleCode.CURATOR);
         WithdrawalSession session = lockSession(id);
         requirePlanned(session);
         WithdrawalRequest request = session.getRequest();
@@ -246,27 +252,12 @@ public class WithdrawalService {
         }
     }
 
-    private List<RequestView> listRequests(WithdrawalStatus status) {
+    private List<WithdrawalRequestView> listRequests(WithdrawalStatus status) {
         List<WithdrawalRequest> selected = status == null ? requests.findAllByOrderBySubmittedAtAsc()
                 : requests.findAllByStatusOrderBySubmittedAtAsc(status);
-        List<RequestView> result = new ArrayList<>();
+        List<WithdrawalRequestView> result = new ArrayList<>();
         for (WithdrawalRequest request : selected) result.add(requestView(request));
         return result;
-    }
-
-    private Employee requireEmployee(AuthPrincipal principal, String role) {
-        if (principal == null || principal.type() != AuthPrincipal.AccountType.EMPLOYEE
-                || !employees.hasRole(principal.id(), role)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Нужна роль " + role);
-        }
-        return employees.findById(principal.id()).orElseThrow(() ->
-                new ResponseStatusException(HttpStatus.FORBIDDEN, "Сотрудник не найден"));
-    }
-
-    private void requireDepositor(AuthPrincipal principal) {
-        if (principal == null || principal.type() != AuthPrincipal.AccountType.DEPOSITOR) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Доступ только депозитору");
-        }
     }
 
     private void checkOwner(AuthPrincipal principal, Long ownerId) {
@@ -313,14 +304,14 @@ public class WithdrawalService {
         return findSession(id);
     }
 
-    private RequestView requestView(WithdrawalRequest request) {
-        SessionSummary session = null;
+    private WithdrawalRequestView requestView(WithdrawalRequest request) {
+        WithdrawalSessionSummary session = null;
         var planned = sessions.findByRequest_Id(request.getId());
         if (planned.isPresent()) {
             WithdrawalSession value = planned.get();
-            session = new SessionSummary(value.getId(), value.getPlannedDate(), value.getStatus(), value.getCompletedAt());
+            session = new WithdrawalSessionSummary(value.getId(), value.getPlannedDate(), value.getStatus(), value.getCompletedAt());
         }
-        return new RequestView(
+        return new WithdrawalRequestView(
                 request.getId(), request.getBatch().getId(), request.getBatch().getNumber(),
                 request.getDepositor().getId(), request.getDepositor().getLegalName(),
                 request.getReason(), request.getDesiredDate(), request.getStatus(), request.getSubmittedAt(),
@@ -329,8 +320,8 @@ public class WithdrawalService {
                 request.getRejectionReason(), session, boxViews(request.getBoxes()));
     }
 
-    private SessionView sessionView(WithdrawalSession session) {
-        return new SessionView(session.getId(), session.getRequest().getId(), session.getCurator().getId(),
+    private WithdrawalSessionView sessionView(WithdrawalSession session) {
+        return new WithdrawalSessionView(session.getId(), session.getRequest().getId(), session.getCurator().getId(),
                 session.getPlannedDate(), session.getStatus(), session.getCompletedAt(),
                 session.getRequest().getStatus(), boxViews(session.getBoxes()));
     }
@@ -338,10 +329,10 @@ public class WithdrawalService {
     private List<WithdrawalBoxView> boxViews(List<Box> selected) {
         List<WithdrawalBoxView> result = new ArrayList<>();
         for (Box box : selected) {
-            IntakeService.PlaceView location = null;
+            StoragePlaceView location = null;
             if (box.getStatus() == BoxStatus.PLACED && box.getStoragePlace() != null) {
                 StoragePlace place = box.getStoragePlace();
-                location = new IntakeService.PlaceView(place.getId(), place.getChamber().getId(),
+                location = new StoragePlaceView(place.getId(), place.getChamber().getId(),
                         place.getChamber().getCode(), place.getRackNo(), place.getShelfNo(), place.getRowNo());
             }
             result.add(new WithdrawalBoxView(box.getId(), box.getSeqNo(), box.getBarcode(), box.getStatus(),
@@ -357,14 +348,4 @@ public class WithdrawalService {
     private ResponseStatusException notFound(String object) {
         return new ResponseStatusException(HttpStatus.NOT_FOUND, object + " не найдена");
     }
-
-    public record SessionSummary(Long id, LocalDate plannedDate, SessionStatus status, OffsetDateTime completedAt) {}
-    public record WithdrawalBoxView(Long id, short seqNo, String barcode, BoxStatus status,
-                                    IntakeService.PlaceView storagePlace, OffsetDateTime withdrawnAt) {}
-    public record RequestView(Long id, Long batchId, String batchNumber, Long depositorId, String depositorName,
-                              String reason, LocalDate desiredDate, WithdrawalStatus status, OffsetDateTime submittedAt,
-                              Long curatorId, OffsetDateTime curatorDecisionAt, Long adminId, OffsetDateTime adminDecisionAt,
-                              String rejectionReason, SessionSummary session, List<WithdrawalBoxView> boxes) {}
-    public record SessionView(Long id, Long requestId, Long curatorId, LocalDate plannedDate, SessionStatus status,
-                              OffsetDateTime completedAt, WithdrawalStatus requestStatus, List<WithdrawalBoxView> boxes) {}
 }

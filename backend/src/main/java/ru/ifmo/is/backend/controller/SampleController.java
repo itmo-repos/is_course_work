@@ -2,11 +2,12 @@ package ru.ifmo.is.backend.controller;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+import ru.ifmo.is.backend.dto.catalog.CountryView;
+import ru.ifmo.is.backend.dto.catalog.SampleSearchView;
+import ru.ifmo.is.backend.dto.species.SpeciesView;
 import ru.ifmo.is.backend.repository.CountryRepository;
 import ru.ifmo.is.backend.repository.SpeciesRepository;
-import ru.ifmo.is.backend.repository.projections.SampleSearchProjection;
 import ru.ifmo.is.backend.services.SampleStorageService;
-import ru.ifmo.is.backend.services.SpeciesService.SpeciesView;
 
 import java.util.List;
 
@@ -19,7 +20,7 @@ public class SampleController {
     private final CountryRepository countries;
 
     @GetMapping
-    public List<SampleSearchProjection> search(@RequestParam(required = false) String species,
+    public List<SampleSearchView> search(@RequestParam(required = false) String species,
                                                @RequestParam(required = false) String country) {
         return samples.search(species, country);
     }
@@ -35,6 +36,4 @@ public class SampleController {
         return countries.findAll(org.springframework.data.domain.Sort.by("name")).stream()
                 .map(c -> new CountryView(c.getCode(), c.getName())).toList();
     }
-
-    public record CountryView(String code, String name) {}
 }

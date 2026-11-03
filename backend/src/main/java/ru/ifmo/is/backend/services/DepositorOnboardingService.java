@@ -1,23 +1,29 @@
 package ru.ifmo.is.backend.services;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
+import ru.ifmo.is.backend.dto.common.StoredDocument;
+import ru.ifmo.is.backend.dto.depositor.ApplicationRequest;
+import ru.ifmo.is.backend.dto.depositor.ContractView;
+import ru.ifmo.is.backend.dto.depositor.DepositorView;
 import ru.ifmo.is.backend.entitiy.Contract;
 import ru.ifmo.is.backend.entitiy.Country;
 import ru.ifmo.is.backend.entitiy.Depositor;
 import ru.ifmo.is.backend.entitiy.Employee;
 import ru.ifmo.is.backend.entitiy.enums.ContractStatus;
 import ru.ifmo.is.backend.entitiy.enums.DepositorStatus;
+import ru.ifmo.is.backend.entitiy.enums.RoleCode;
 import ru.ifmo.is.backend.repository.ContractRepository;
 import ru.ifmo.is.backend.repository.CountryRepository;
 import ru.ifmo.is.backend.repository.DepositorRepository;
 import ru.ifmo.is.backend.repository.EmployeeRepository;
+import ru.ifmo.is.backend.security.AccessService;
 import ru.ifmo.is.backend.security.AuthPrincipal;
 
 import java.io.IOException;
@@ -32,6 +38,7 @@ import java.util.UUID;
 public class DepositorOnboardingService {
     private static final long MAX_SCAN_BYTES = 15L * 1024 * 1024;
 
+    private final AccessService access;
     private final DepositorRepository depositorRepository;
     private final ContractRepository contractRepository;
     private final CountryRepository countryRepository;
@@ -41,7 +48,7 @@ public class DepositorOnboardingService {
     private final ContractFileStorageService fileStorageService;
 
     @Transactional
-    public DepositorView submitApplication(ApplicationData data) {
+    public DepositorView submitApplication(ApplicationRequest data) {
         String email = data.contactEmail().strip().toLowerCase(Locale.ROOT);
         String legalName = data.legalName().strip();
         String countryCode = data.countryCode().strip().toUpperCase(Locale.ROOT);
@@ -107,7 +114,8 @@ public class DepositorOnboardingService {
     }
 
     @Transactional(readOnly = true)
-    public List<DepositorView> listApplications(DepositorStatus status) {
+    public List<DepositorView> listApplications(AuthPrincipal principal, DepositorStatus status) {
+        access.requireRole(principal, RoleCode.ADMIN);
         List<Depositor> depositors = status == null
                 ? depositorRepository.findAll(Sort.by(Sort.Direction.ASC, "createdAt"))
                 : depositorRepository.findAllByStatusOrderByCreatedAtAsc(status);
@@ -115,7 +123,8 @@ public class DepositorOnboardingService {
     }
 
     @Transactional(readOnly = true)
-    public StoredDocument getSignedScan(Long depositorId) {
+    public StoredDocument getSignedScan(AuthPrincipal principal, Long depositorId) {
+        access.requireRole(principal, RoleCode.ADMIN);
         Contract contract = latestContract(depositorId);
         if (contract.getSignedScanUri() == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Скан подписанного договора не загружен");
@@ -127,7 +136,8 @@ public class DepositorOnboardingService {
     }
 
     @Transactional
-    public DepositorView approveApplication(Long depositorId) {
+    public DepositorView approveApplication(AuthPrincipal principal, Long depositorId) {
+        access.requireRole(principal, RoleCode.ADMIN);
         Depositor depositor = lockDepositor(depositorId);
         requireStatus(depositor, DepositorStatus.NEW_REQUEST);
 
@@ -147,7 +157,8 @@ public class DepositorOnboardingService {
     }
 
     @Transactional
-    public DepositorView rejectApplication(Long depositorId, String reason) {
+    public DepositorView rejectApplication(AuthPrincipal principal, Long depositorId, String reason) {
+        access.requireRole(principal, RoleCode.ADMIN);
         Depositor depositor = lockDepositor(depositorId);
         requireStatus(depositor, DepositorStatus.NEW_REQUEST);
         depositor.setStatus(DepositorStatus.REJECTED);
@@ -157,13 +168,13 @@ public class DepositorOnboardingService {
 
     @Transactional
     public DepositorView verifyContract(Long depositorId, AuthPrincipal reviewer) {
+        Employee employee = access.requireEmployee(reviewer, RoleCode.ADMIN);
         Depositor depositor = lockDepositor(depositorId);
         requireStatus(depositor, DepositorStatus.VERIFICATION);
         Contract contract = latestContract(depositorId);
         if (contract.getStatus() != ContractStatus.SCAN_UPLOADED) {
             throw conflict("Нет загруженного скана для проверки");
         }
-        Employee employee = requireAdminEmployee(reviewer);
         contract.setStatus(ContractStatus.VERIFIED);
         contract.setVerifiedBy(employee);
         contract.setVerifiedAt(OffsetDateTime.now());
@@ -176,7 +187,8 @@ public class DepositorOnboardingService {
     }
 
     @Transactional
-    public DepositorView rejectContract(Long depositorId, String reason) {
+    public DepositorView rejectContract(AuthPrincipal principal, Long depositorId, String reason) {
+        access.requireRole(principal, RoleCode.ADMIN);
         Depositor depositor = lockDepositor(depositorId);
         requireStatus(depositor, DepositorStatus.VERIFICATION);
         Contract contract = latestContract(depositorId);
@@ -191,7 +203,8 @@ public class DepositorOnboardingService {
     }
 
     @Transactional
-    public DepositorView returnForResubmission(Long depositorId) {
+    public DepositorView returnForResubmission(AuthPrincipal principal, Long depositorId) {
+        access.requireRole(principal, RoleCode.ADMIN);
         Depositor depositor = lockDepositor(depositorId);
         requireStatus(depositor, DepositorStatus.CONTRACT_REJECTED);
         Contract contract = latestContract(depositorId);
@@ -208,7 +221,8 @@ public class DepositorOnboardingService {
     }
 
     @Transactional
-    public DepositorView rejectFinally(Long depositorId, String reason) {
+    public DepositorView rejectFinally(AuthPrincipal principal, Long depositorId, String reason) {
+        access.requireRole(principal, RoleCode.ADMIN);
         Depositor depositor = lockDepositor(depositorId);
         requireStatus(depositor, DepositorStatus.CONTRACT_REJECTED);
         depositor.setStatus(DepositorStatus.REJECTED);
@@ -227,32 +241,19 @@ public class DepositorOnboardingService {
     }
 
     private Depositor requireOwnDepositor(AuthPrincipal principal) {
-        if (principal == null || principal.type() != AuthPrincipal.AccountType.DEPOSITOR) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Требуется аккаунт депозитора");
-        }
+        access.requireDepositor(principal);
         return depositorRepository.findById(principal.id())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Депозитор не найден"));
     }
 
     private Depositor lockOwnDepositor(AuthPrincipal principal) {
-        if (principal == null || principal.type() != AuthPrincipal.AccountType.DEPOSITOR) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Требуется аккаунт депозитора");
-        }
+        access.requireDepositor(principal);
         return lockDepositor(principal.id());
     }
 
     private Depositor lockDepositor(Long id) {
         return depositorRepository.findByIdForUpdate(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Депозитор не найден"));
-    }
-
-    private Employee requireAdminEmployee(AuthPrincipal principal) {
-        if (principal == null || principal.type() != AuthPrincipal.AccountType.EMPLOYEE
-                || !principal.roles().contains("ADMIN")) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Требуется роль администратора");
-        }
-        return employeeRepository.findById(principal.id())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Сотрудник не найден"));
     }
 
     private Contract latestContract(Long depositorId) {
@@ -327,17 +328,4 @@ public class DepositorOnboardingService {
     }
 
     private record UploadedFile(byte[] content, String extension) {}
-
-    public record ApplicationData(String legalName, String countryCode, String registrationNumber,
-                                  String legalAddress, String contactPerson, String contactEmail,
-                                  String contactPhone, String password) {}
-
-    public record DepositorView(Long id, String legalName, String countryCode, String countryName,
-                                String registrationNumber, String legalAddress, String contactPerson,
-                                String contactEmail, String contactPhone, DepositorStatus status,
-                                String rejectionReason, OffsetDateTime createdAt, ContractView contract) {}
-
-    public record ContractView(String number, ContractStatus status, String rejectionReason) {}
-
-    public record StoredDocument(byte[] content, String filename, String mediaType) {}
 }

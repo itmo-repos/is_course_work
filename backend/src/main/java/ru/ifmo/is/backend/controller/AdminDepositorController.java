@@ -1,8 +1,6 @@
 package ru.ifmo.is.backend.controller;
 
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
@@ -16,11 +14,12 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import ru.ifmo.is.backend.dto.common.ReasonRequest;
+import ru.ifmo.is.backend.dto.common.StoredDocument;
+import ru.ifmo.is.backend.dto.depositor.DepositorView;
 import ru.ifmo.is.backend.entitiy.enums.DepositorStatus;
 import ru.ifmo.is.backend.security.AuthPrincipal;
 import ru.ifmo.is.backend.services.DepositorOnboardingService;
-import ru.ifmo.is.backend.services.DepositorOnboardingService.DepositorView;
-import ru.ifmo.is.backend.services.DepositorOnboardingService.StoredDocument;
 
 import java.util.List;
 
@@ -31,23 +30,23 @@ public class AdminDepositorController {
     private final DepositorOnboardingService onboardingService;
 
     @GetMapping
-    public List<DepositorView> applications(@RequestParam(required = false) DepositorStatus status) {
-        return onboardingService.listApplications(status);
+    public List<DepositorView> applications(@AuthenticationPrincipal AuthPrincipal principal, @RequestParam(required = false) DepositorStatus status) {
+        return onboardingService.listApplications(principal, status);
     }
 
     @PostMapping("/{id}/approve")
-    public DepositorView approve(@PathVariable Long id) {
-        return onboardingService.approveApplication(id);
+    public DepositorView approve(@AuthenticationPrincipal AuthPrincipal principal, @PathVariable Long id) {
+        return onboardingService.approveApplication(principal, id);
     }
 
     @PostMapping("/{id}/reject")
-    public DepositorView reject(@PathVariable Long id, @Valid @RequestBody RejectionRequest request) {
-        return onboardingService.rejectApplication(id, request.reason());
+    public DepositorView reject(@AuthenticationPrincipal AuthPrincipal principal, @PathVariable Long id, @Valid @RequestBody ReasonRequest request) {
+        return onboardingService.rejectApplication(principal, id, request.reason());
     }
 
     @GetMapping("/{id}/contract/scan")
-    public ResponseEntity<byte[]> signedScan(@PathVariable Long id) {
-        return asDownload(onboardingService.getSignedScan(id));
+    public ResponseEntity<byte[]> signedScan(@AuthenticationPrincipal AuthPrincipal principal, @PathVariable Long id) {
+        return asDownload(onboardingService.getSignedScan(principal, id));
     }
 
     @PostMapping("/{id}/contract/verify")
@@ -56,20 +55,20 @@ public class AdminDepositorController {
     }
 
     @PostMapping("/{id}/contract/reject")
-    public DepositorView rejectContract(@PathVariable Long id,
-                                        @Valid @RequestBody RejectionRequest request) {
-        return onboardingService.rejectContract(id, request.reason());
+    public DepositorView rejectContract(@AuthenticationPrincipal AuthPrincipal principal, @PathVariable Long id,
+                                        @Valid @RequestBody ReasonRequest request) {
+        return onboardingService.rejectContract(principal, id, request.reason());
     }
 
     @PostMapping("/{id}/contract/return-for-signing")
-    public DepositorView returnForSigning(@PathVariable Long id) {
-        return onboardingService.returnForResubmission(id);
+    public DepositorView returnForSigning(@AuthenticationPrincipal AuthPrincipal principal, @PathVariable Long id) {
+        return onboardingService.returnForResubmission(principal, id);
     }
 
     @PostMapping("/{id}/reject-final")
-    public DepositorView rejectFinally(@PathVariable Long id,
-                                       @Valid @RequestBody RejectionRequest request) {
-        return onboardingService.rejectFinally(id, request.reason());
+    public DepositorView rejectFinally(@AuthenticationPrincipal AuthPrincipal principal, @PathVariable Long id,
+                                       @Valid @RequestBody ReasonRequest request) {
+        return onboardingService.rejectFinally(principal, id, request.reason());
     }
 
     private static ResponseEntity<byte[]> asDownload(StoredDocument document) {
@@ -79,6 +78,4 @@ public class AdminDepositorController {
                         ContentDisposition.attachment().filename(document.filename()).build().toString())
                 .body(document.content());
     }
-
-    public record RejectionRequest(@NotBlank @Size(max = 2000) String reason) {}
 }

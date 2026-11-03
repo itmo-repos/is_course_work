@@ -7,11 +7,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import ru.ifmo.is.backend.dto.batch.BatchData;
+import ru.ifmo.is.backend.dto.batch.BatchView;
+import ru.ifmo.is.backend.dto.storage.StoredBoxView;
 import ru.ifmo.is.backend.security.AuthPrincipal;
 import ru.ifmo.is.backend.services.BatchService;
 import ru.ifmo.is.backend.services.IntakeService;
-import ru.ifmo.is.backend.services.BatchService.BatchData;
-import ru.ifmo.is.backend.services.BatchService.BatchView;
 
 import java.util.List;
 
@@ -39,7 +40,7 @@ public class DepositorBatchController {
     }
 
     @GetMapping("/{id}/boxes")
-    public List<IntakeService.StoredBoxView> boxes(@AuthenticationPrincipal AuthPrincipal principal, @PathVariable Long id) {
+    public List<StoredBoxView> boxes(@AuthenticationPrincipal AuthPrincipal principal, @PathVariable Long id) {
         return intakeService.ownBoxes(principal, id);
     }
 

@@ -1,8 +1,8 @@
 package ru.ifmo.is.backend.security;
 
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -21,10 +21,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-
-import java.util.List;
+import ru.ifmo.is.backend.dto.auth.CsrfResponse;
+import ru.ifmo.is.backend.dto.auth.LoginRequest;
+import ru.ifmo.is.backend.dto.auth.MeResponse;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -63,13 +62,5 @@ public class AuthController {
     @GetMapping("/me")
     public MeResponse me(@AuthenticationPrincipal AuthPrincipal principal) {
         return MeResponse.from(principal);
-    }
-
-    public record LoginRequest(@NotBlank @Email String email, @NotBlank String password) {}
-    public record CsrfResponse(String headerName, String token) {}
-    public record MeResponse(Long id, AuthPrincipal.AccountType type, String email, List<String> roles) {
-        static MeResponse from(AuthPrincipal principal) {
-            return new MeResponse(principal.id(), principal.type(), principal.email(), principal.roles());
-        }
     }
 }

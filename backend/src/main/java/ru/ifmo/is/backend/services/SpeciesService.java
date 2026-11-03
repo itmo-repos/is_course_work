@@ -6,25 +6,26 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import ru.ifmo.is.backend.dto.species.SpeciesView;
 import ru.ifmo.is.backend.entitiy.Depositor;
 import ru.ifmo.is.backend.entitiy.Species;
 import ru.ifmo.is.backend.entitiy.enums.DepositorStatus;
 import ru.ifmo.is.backend.repository.DepositorRepository;
 import ru.ifmo.is.backend.repository.SpeciesRepository;
+import ru.ifmo.is.backend.security.AccessService;
 import ru.ifmo.is.backend.security.AuthPrincipal;
 
 @Service
 @RequiredArgsConstructor
 public class SpeciesService {
+    private final AccessService access;
     private final SpeciesRepository species;
     private final DepositorRepository depositors;
     private final JdbcTemplate jdbc;
 
     @Transactional
     public SpeciesView create(AuthPrincipal principal, String latinName, String localName, String family) {
-        if (principal == null || principal.type() != AuthPrincipal.AccountType.DEPOSITOR) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Добавлять виды может только активный депозитор");
-        }
+        access.requireDepositor(principal);
         Depositor depositor = depositors.findByIdForUpdate(principal.id()).orElseThrow(() ->
                 new ResponseStatusException(HttpStatus.NOT_FOUND, "Депозитор не найден"));
         if (depositor.getStatus() != DepositorStatus.ACTIVE) {
@@ -51,6 +52,4 @@ public class SpeciesService {
     private String normalize(String value) {
         return value.strip().replaceAll("\\s+", " ");
     }
-
-    public record SpeciesView(Long id, String latinName, String localName, String family) {}
 }

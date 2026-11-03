@@ -7,10 +7,15 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+import ru.ifmo.is.backend.dto.batch.BatchIdentificationView;
+import ru.ifmo.is.backend.dto.storage.ChamberView;
+import ru.ifmo.is.backend.dto.storage.IntakeSessionView;
+import ru.ifmo.is.backend.dto.storage.StoragePlaceView;
+import ru.ifmo.is.backend.dto.storage.StoredBoxView;
 import ru.ifmo.is.backend.entitiy.*;
 import ru.ifmo.is.backend.entitiy.enums.*;
 import ru.ifmo.is.backend.repository.*;
-import ru.ifmo.is.backend.repository.projections.BatchBarcodeProjection;
+import ru.ifmo.is.backend.security.AccessService;
 import ru.ifmo.is.backend.security.AuthPrincipal;
 
 import java.time.LocalDate;
@@ -27,19 +32,19 @@ public class IntakeService {
     private final IntakeSessionRepository sessions;
     private final StoragePlaceRepository places;
     private final ChamberRepository chambers;
-    private final EmployeeRepository employees;
+    private final AccessService access;
     private final BoxStorageService boxStorage;
     private final EntityManager entityManager;
 
-    public BatchBarcodeProjection identify(AuthPrincipal principal, String barcode) {
-        requireCurator(principal);
+    public BatchIdentificationView identify(AuthPrincipal principal, String barcode) {
+        access.requireRole(principal, RoleCode.CURATOR);
         return boxStorage.getBatchByBarcode(barcode.strip());
     }
 
     @Transactional
-    public BatchBarcodeProjection arrive(AuthPrincipal principal, String barcode) {
-        requireCurator(principal);
-        Long batchId = boxStorage.getBatchByBarcode(barcode.strip()).getBatchId();
+    public BatchIdentificationView arrive(AuthPrincipal principal, String barcode) {
+        access.requireRole(principal, RoleCode.CURATOR);
+        Long batchId = boxStorage.getBatchByBarcode(barcode.strip()).batchId();
         Batch batch = lockBatch(batchId);
         if (batch.getStatus() != BatchStatus.ARRIVED) {
             throw conflict("Для досмотра партия должна быть в статусе ARRIVED");
@@ -68,8 +73,8 @@ public class IntakeService {
     }
 
     @Transactional
-    public SessionView createSession(AuthPrincipal principal, Long batchId, Long chamberId, LocalDate plannedDate) {
-        Employee curator = requireCurator(principal);
+    public IntakeSessionView createSession(AuthPrincipal principal, Long batchId, Long chamberId, LocalDate plannedDate) {
+        Employee curator = access.requireEmployee(principal, RoleCode.CURATOR);
         Batch batch = lockBatch(batchId);
         requireBeforeInspection(batch);
         if (sessions.existsByBatch_Id(batchId)) {
@@ -87,8 +92,8 @@ public class IntakeService {
     }
 
     @Transactional
-    public SessionView updateSession(AuthPrincipal principal, Long id, Long chamberId, LocalDate plannedDate) {
-        requireCurator(principal);
+    public IntakeSessionView updateSession(AuthPrincipal principal, Long id, Long chamberId, LocalDate plannedDate) {
+        access.requireRole(principal, RoleCode.CURATOR);
         Long batchId = sessions.findBatchIdById(id).orElseThrow(() ->
                 new ResponseStatusException(HttpStatus.NOT_FOUND, "Сессия приёма не найдена"));
         Batch batch = lockBatch(batchId);
@@ -122,15 +127,15 @@ public class IntakeService {
         return batchBoxes;
     }
 
-    public SessionView getSession(AuthPrincipal principal, Long id) {
-        requireCurator(principal);
+    public IntakeSessionView getSession(AuthPrincipal principal, Long id) {
+        access.requireRole(principal, RoleCode.CURATOR);
         IntakeSession session = sessions.findById(id).orElseThrow(() ->
                 new ResponseStatusException(HttpStatus.NOT_FOUND, "Сессия приёма не найдена"));
         return sessionView(session);
     }
 
     public List<ChamberView> listChambers(AuthPrincipal principal, boolean includeInactive) {
-        requireCurator(principal);
+        access.requireRole(principal, RoleCode.CURATOR);
         List<ChamberView> result = new ArrayList<>();
         List<Chamber> selected = includeInactive ? chambers.findAllByOrderByCodeAsc()
                 : chambers.findAllByStatusOrderByCodeAsc(ChamberStatus.ACTIVE);
@@ -141,14 +146,14 @@ public class IntakeService {
         return result;
     }
 
-    public List<PlaceView> freePlaces(AuthPrincipal principal, Long chamberId) {
-        requireCurator(principal);
+    public List<StoragePlaceView> freePlaces(AuthPrincipal principal, Long chamberId) {
+        access.requireRole(principal, RoleCode.CURATOR);
         Chamber chamber = chambers.findById(chamberId).orElseThrow(() ->
                 new ResponseStatusException(HttpStatus.NOT_FOUND, "Камера не найдена"));
         if (chamber.getStatus() != ChamberStatus.ACTIVE) {
             throw conflict("Камера неактивна");
         }
-        List<PlaceView> result = new ArrayList<>();
+        List<StoragePlaceView> result = new ArrayList<>();
         for (StoragePlace place : places.findFreePlaces(chamberId)) {
             result.add(placeView(place));
         }
@@ -157,7 +162,7 @@ public class IntakeService {
 
     @Transactional
     public StoredBoxView changePlace(AuthPrincipal principal, Long boxId, Long placeId) {
-        requireCurator(principal);
+        access.requireRole(principal, RoleCode.CURATOR);
         Box box = lockBox(boxId);
         requireAwaiting(box);
         IntakeSession session = sessionFor(box.getBatch());
@@ -177,7 +182,7 @@ public class IntakeService {
 
     @Transactional
     public StoredBoxView place(AuthPrincipal principal, Long boxId) {
-        requireCurator(principal);
+        access.requireRole(principal, RoleCode.CURATOR);
         Box box = lockBox(boxId);
         requireAwaiting(box);
         IntakeSession session = sessionFor(box.getBatch());
@@ -198,7 +203,7 @@ public class IntakeService {
 
     @Transactional
     public StoredBoxView writeOff(AuthPrincipal principal, Long boxId, String reason) {
-        requireCurator(principal);
+        access.requireRole(principal, RoleCode.CURATOR);
         Box box = lockBox(boxId);
         requireAwaiting(box);
         IntakeSession session = sessionFor(box.getBatch());
@@ -213,7 +218,7 @@ public class IntakeService {
 
     @Transactional
     public StoredBoxView move(AuthPrincipal principal, Long boxId, Long placeId) {
-        requireCurator(principal);
+        access.requireRole(principal, RoleCode.CURATOR);
         Box box = lockBox(boxId);
         if (box.getStatus() != BoxStatus.PLACED) {
             throw conflict("Перемещать можно только размещённую коробку");
@@ -232,9 +237,7 @@ public class IntakeService {
     }
 
     public List<StoredBoxView> ownBoxes(AuthPrincipal principal, Long batchId) {
-        if (principal == null || principal.type() != AuthPrincipal.AccountType.DEPOSITOR) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Доступ только депозитору");
-        }
+        access.requireDepositor(principal);
         Batch batch = batches.findById(batchId).orElseThrow(() ->
                 new ResponseStatusException(HttpStatus.NOT_FOUND, "Партия не найдена"));
         if (!batch.getDepositor().getId().equals(principal.id())) {
@@ -272,15 +275,6 @@ public class IntakeService {
         session.getBatch().setStatus(result);
         session.setStatus(SessionStatus.COMPLETED);
         session.setCompletedAt(OffsetDateTime.now());
-    }
-
-    private Employee requireCurator(AuthPrincipal principal) {
-        if (principal == null || principal.type() != AuthPrincipal.AccountType.EMPLOYEE
-                || !employees.hasRole(principal.id(), "CURATOR")) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Доступ только куратору");
-        }
-        return employees.findById(principal.id()).orElseThrow(() ->
-                new ResponseStatusException(HttpStatus.FORBIDDEN, "Сотрудник не найден"));
     }
 
     private Batch lockBatch(Long batchId) {
@@ -344,18 +338,18 @@ public class IntakeService {
         }
     }
 
-    private SessionView sessionView(IntakeSession session) {
+    private IntakeSessionView sessionView(IntakeSession session) {
         List<StoredBoxView> contents = new ArrayList<>();
         for (Box box : boxes.findAllByBatch_IdOrderBySeqNoAsc(session.getBatch().getId())) {
             contents.add(boxView(box, true));
         }
-        return new SessionView(session.getId(), session.getBatch().getId(), session.getBatch().getStatus(),
+        return new IntakeSessionView(session.getId(), session.getBatch().getId(), session.getBatch().getStatus(),
                 session.getCurator().getId(), session.getChamber().getId(), session.getPlannedDate(),
                 session.getStatus(), session.getCompletedAt(), contents);
     }
 
     private StoredBoxView boxView(Box box, boolean curator) {
-        PlaceView location = null;
+        StoragePlaceView location = null;
         if (box.getStoragePlace() != null && (curator || box.getStatus() == BoxStatus.PLACED)) {
             location = placeView(box.getStoragePlace());
         }
@@ -363,20 +357,12 @@ public class IntakeService {
                 box.getWriteOffReason(), box.getPlacedAt(), location);
     }
 
-    private PlaceView placeView(StoragePlace place) {
-        return new PlaceView(place.getId(), place.getChamber().getId(), place.getChamber().getCode(),
+    private StoragePlaceView placeView(StoragePlace place) {
+        return new StoragePlaceView(place.getId(), place.getChamber().getId(), place.getChamber().getCode(),
                 place.getRackNo(), place.getShelfNo(), place.getRowNo());
     }
 
     private ResponseStatusException conflict(String message) {
         return new ResponseStatusException(HttpStatus.CONFLICT, message);
     }
-
-    public record ChamberView(Long id, String code, String name, ChamberStatus status, int freePlaceCount) {}
-    public record PlaceView(Long id, Long chamberId, String chamberCode, short rackNo, short shelfNo, short rowNo) {}
-    public record StoredBoxView(Long id, short seqNo, String barcode, BoxStatus status, String writeOffReason,
-                                OffsetDateTime placedAt, PlaceView storagePlace) {}
-    public record SessionView(Long id, Long batchId, BatchStatus batchStatus, Long curatorId, Long chamberId,
-                              LocalDate plannedDate, SessionStatus status, OffsetDateTime completedAt,
-                              List<StoredBoxView> boxes) {}
 }
