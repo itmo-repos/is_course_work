@@ -6,10 +6,13 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.web.server.ResponseStatusException;
 import ru.ifmo.is.backend.dto.common.PageView;
 import ru.ifmo.is.backend.dto.notification.NotificationView;
 import ru.ifmo.is.backend.entitiy.*;
+import ru.ifmo.is.backend.entitiy.enums.*;
+import ru.ifmo.is.backend.repository.EmployeeRepository;
 import ru.ifmo.is.backend.repository.NotificationRepository;
 import ru.ifmo.is.backend.security.AccessService;
 import ru.ifmo.is.backend.security.AuthPrincipal;
@@ -22,6 +25,20 @@ import java.time.ZoneOffset;
 public class NotificationService {
     private final NotificationRepository notifications;
     private final AccessService access;
+    private final EmployeeRepository employees;
+
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void climateAlert(ClimateReading reading, ClimateParameter parameter, String message) {
+        for (Employee engineer : employees.findActiveByRole(RoleCode.ENGINEER)) {
+            Notification notification = new Notification();
+            notification.setEmployee(engineer);
+            notification.setReading(reading);
+            notification.setType(NotificationType.CLIMATE_ALERT);
+            notification.setParameter(parameter);
+            notification.setMessage(message);
+            notifications.save(notification);
+        }
+    }
 
     public PageView<NotificationView> own(AuthPrincipal principal, boolean unreadOnly, int page, int size) {
         Employee employee = access.requireStaff(principal);

@@ -17,6 +17,7 @@ DROP TABLE IF EXISTS box;
 DROP TABLE IF EXISTS batch;
 
 DROP TABLE IF EXISTS notification;
+DROP TABLE IF EXISTS gateway_key;
 DROP TABLE IF EXISTS climate_reading;
 DROP TABLE IF EXISTS storage_place;
 DROP TABLE IF EXISTS chamber;

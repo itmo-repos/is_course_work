@@ -227,6 +227,16 @@ CREATE TABLE climate_reading (
     CONSTRAINT chk_climate_temp CHECK (temperature BETWEEN -80 AND 60)
 );
 
+-- Ключ может только передавать климатические показания в закреплённую камеру.
+CREATE TABLE gateway_key (
+    id          bigserial PRIMARY KEY,
+    name        varchar(100) NOT NULL,
+    chamber_id  bigint NOT NULL REFERENCES chamber(id) ON DELETE RESTRICT,
+    key_hash    varchar(64) NOT NULL UNIQUE,
+    issued_by   bigint NOT NULL REFERENCES employee(id) ON DELETE RESTRICT,
+    issued_at   timestamp NOT NULL DEFAULT now()
+);
+
 -- оповещение как закрепляет и фиксирует инцидент, так и запускает рассылку по ответственным
 
 CREATE TABLE notification (

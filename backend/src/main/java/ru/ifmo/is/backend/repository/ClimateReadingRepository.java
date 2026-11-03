@@ -12,6 +12,8 @@ import java.util.Optional;
 public interface ClimateReadingRepository extends JpaRepository<ClimateReading, Long> {
     Optional<ClimateReading> findFirstByChamber_IdOrderByMeasuredAtDesc(Long chamberId);
 
+    Optional<ClimateReading> findByChamber_IdAndMeasuredAt(Long chamberId, LocalDateTime measuredAt);
+
     Page<ClimateReading> findByChamber_IdAndMeasuredAtBetweenOrderByMeasuredAtAsc(
             Long chamberId, LocalDateTime from, LocalDateTime to, Pageable pageable);
 
