@@ -21,12 +21,17 @@ section 'Партии, штрихкоды и транспортные стату
 . "$DEMO_DIR/batches/check.sh"
 
 next_part
+section 'Просмотр климата, настройки камеры, уведомления и CSV'
+. "$DEMO_DIR/climate/check.sh"
+
+next_part
 section 'Приём, размещение и перемещение коробок'
 . "$DEMO_DIR/intake/check.sh"
 
 next_part
 section 'Заявки и сессии изъятия'
 . "$DEMO_DIR/withdrawal/check.sh"
+. "$DEMO_DIR/climate/restore.sh"
 
 next_part
 section 'Выход и проверка закрытия сессий'
