@@ -29,6 +29,23 @@ public class AccessService {
         }
     }
 
+    public void requireAnyRole(AuthPrincipal principal, RoleCode... roles) {
+        if (principal != null && principal.type() == AuthPrincipal.AccountType.EMPLOYEE) {
+            for (RoleCode role : roles) {
+                if (employees.hasRole(principal.id(), role.name())) return;
+            }
+        }
+        throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Недостаточно прав сотрудника");
+    }
+
+    public Employee requireStaff(AuthPrincipal principal) {
+        if (principal == null || principal.type() != AuthPrincipal.AccountType.EMPLOYEE) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Доступ только сотруднику");
+        }
+        return employees.findById(principal.id()).filter(Employee::isActive).orElseThrow(() ->
+                new ResponseStatusException(HttpStatus.FORBIDDEN, "Сотрудник неактивен или не найден"));
+    }
+
     public Employee requireEmployee(AuthPrincipal principal, RoleCode role) {
         requireRole(principal, role);
         return employees.findById(principal.id()).orElseThrow(() ->

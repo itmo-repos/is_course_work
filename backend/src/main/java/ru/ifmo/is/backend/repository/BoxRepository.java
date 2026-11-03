@@ -18,6 +18,8 @@ public interface BoxRepository extends JpaRepository<Box, Long> {
 
     boolean existsByStoragePlace_IdAndIdNot(Long placeId, Long boxId);
 
+    boolean existsByStoragePlace_Chamber_Id(Long chamberId);
+
     @Query(value = "SELECT * FROM identify_batch_by_barcode(:barcode)", nativeQuery = true)
     BatchBarcodeProjection identifyBatchByBarcode(@Param("barcode") String barcode);
 
