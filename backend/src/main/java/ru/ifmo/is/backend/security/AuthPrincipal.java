@@ -7,7 +7,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import java.util.Collection;
 import java.util.List;
 
-public record AuthPrincipal(Long id, AccountType type, String email, List<String> roles)
+public record AuthPrincipal(Long id, AccountType type, String email, List<String> roles, long sessionVersion)
         implements UserDetails {
     public enum AccountType { EMPLOYEE, DEPOSITOR }
 

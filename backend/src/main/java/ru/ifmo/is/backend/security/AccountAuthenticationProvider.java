@@ -41,7 +41,7 @@ public class AccountAuthenticationProvider implements AuthenticationProvider {
             List<String> roles = employeeRepository.findRoleCodes(account.getId()).stream()
                     .map(Enum::name).toList();
             AuthPrincipal principal = new AuthPrincipal(account.getId(), AuthPrincipal.AccountType.EMPLOYEE,
-                    account.getEmail(), roles);
+                    account.getEmail(), roles, account.getSessionVersion());
             return UsernamePasswordAuthenticationToken.authenticated(principal, null, principal.getAuthorities());
         }
         if (depositor.isPresent()) {
@@ -51,7 +51,7 @@ public class AccountAuthenticationProvider implements AuthenticationProvider {
                 throw new BadCredentialsException("Invalid email or password");
             }
             AuthPrincipal principal = new AuthPrincipal(account.getId(), AuthPrincipal.AccountType.DEPOSITOR,
-                    account.getContactEmail(), List.of());
+                    account.getContactEmail(), List.of(), 0);
             return UsernamePasswordAuthenticationToken.authenticated(principal, null, principal.getAuthorities());
         }
         throw new BadCredentialsException("Invalid email or password");

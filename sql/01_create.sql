@@ -122,6 +122,7 @@ CREATE TABLE employee (
     password_hash varchar(255) NOT NULL,
     hired_at      date         NOT NULL DEFAULT CURRENT_DATE,
     is_active     boolean      NOT NULL DEFAULT true,
+    session_version bigint     NOT NULL DEFAULT 0,
     created_at    timestamp  NOT NULL DEFAULT now(),
     CONSTRAINT chk_employee_name  CHECK (btrim(full_name) <> '')
 );

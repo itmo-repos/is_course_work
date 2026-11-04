@@ -11,11 +11,13 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.csrf.HttpSessionCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfTokenRepository;
+import org.springframework.security.web.csrf.CsrfFilter;
 
 @Configuration
 @RequiredArgsConstructor
 public class SecurityConfig {
     private final AccountAuthenticationProvider accountAuthenticationProvider;
+    private final EmployeeSessionService employeeSessions;
 
     @Bean
     AuthenticationManager authenticationManager() {
@@ -30,6 +32,7 @@ public class SecurityConfig {
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http, CsrfTokenRepository csrfTokenRepository) throws Exception {
         http
+                .addFilterBefore(new EmployeeSessionFilter(employeeSessions), CsrfFilter.class)
                 .csrf(csrf -> csrf.csrfTokenRepository(csrfTokenRepository))
                 .authorizeHttpRequests(authorize -> authorize
                         .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()

@@ -39,6 +39,10 @@ section 'Заявки и сессии изъятия'
 . "$DEMO_DIR/climate/restore.sh"
 
 next_part
+section 'Сотрудники, роли и действующие сессии'
+. "$DEMO_DIR/employees/check.sh"
+
+next_part
 section 'Выход и проверка закрытия сессий'
 . "$DEMO_DIR/auth/logout.sh"
 
