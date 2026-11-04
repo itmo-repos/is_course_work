@@ -88,7 +88,6 @@ CREATE TYPE notification_type AS ENUM (
 -- Начало с 1, потому что будет исопльзовано в том числе для отображения человеку
 CREATE SEQUENCE batch_number_seq START 1;
 CREATE SEQUENCE sample_accession_seq START 1;
-CREATE SEQUENCE pass_code_seq    START 1;
 
 -- всякие справочники, типа стран, описания ролей и видов растений
 
@@ -377,7 +376,7 @@ CREATE TABLE withdrawal_session_box (
 
 CREATE TABLE vault_pass (
     id                bigserial PRIMARY KEY,
-    code              varchar(40) NOT NULL UNIQUE,
+    code_hash         varchar(64) NOT NULL UNIQUE,
     employee_id       bigint      REFERENCES employee(id)       ON DELETE SET NULL,
     issued_by         bigint      NOT NULL REFERENCES employee(id) ON DELETE RESTRICT,
     intake_session_id bigint      REFERENCES intake_session(id) ON DELETE SET NULL,

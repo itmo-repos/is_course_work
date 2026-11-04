@@ -37,7 +37,7 @@ public class BatchService {
     private final CountryRepository countries;
     private final AccessService access;
     private final EntityManager entityManager;
-    private final BarcodeService barcodeService;
+    private final CodeImageService codeImages;
 
     @Transactional
     public BatchView create(AuthPrincipal principal, BatchData data) {
@@ -141,7 +141,7 @@ public class BatchService {
         if (box.getBarcode() == null) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Партия ещё не подтверждена");
         }
-        return barcodeService.render(box.getBarcode());
+        return codeImages.renderBarcode(box.getBarcode());
     }
 
     private void saveContents(Batch batch, BatchData data) {

@@ -22,7 +22,14 @@ command_line() {
 
 output() {
     printf "${OUTPUT_COLOR}"
-    jq . "$RESPONSE" 2>/dev/null || cat "$RESPONSE"
+    jq '
+        if type == "object" then
+            (if has("qrSvg") then .code = "<код скрыт>" | .qrSvg = "<QR SVG скрыт>" else . end)
+            | if .issuedPass? != null then
+                .issuedPass.code = "<код скрыт>" | .issuedPass.qrSvg = "<QR SVG скрыт>"
+              else . end
+        else . end
+    ' "$RESPONSE" 2>/dev/null || cat "$RESPONSE"
     printf "${RESET_COLOR}\n"
 }
 

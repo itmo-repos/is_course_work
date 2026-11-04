@@ -21,6 +21,11 @@ output
 http_status
 [ "$STATUS" = '201' ] || { echo 'ОШИБКА: ожидался HTTP 201' >&2; exit 1; }
 SESSION_ID=$(jq -er '.id' "$RESPONSE")
+INTAKE_PASS_ID=$(jq -er '.issuedPass.pass.id' "$RESPONSE")
+INTAKE_PASS_CODE=$(jq -er '.issuedPass.code' "$RESPONSE")
+jq -er '.issuedPass.qrSvg' "$RESPONSE" > "$TEMP_DIR/intake-pass.svg"
+check_json '.issuedPass.code | test("^[A-Za-z0-9_-]{43}$")' 'Пропуск должен содержать случайный код'
+printf "${OUTPUT_COLOR}QR временного пропуска создан; секрет сохранён только для текущего демо и скрыт в выводе.${RESET_COLOR}\n"
 BOX_ID=$(jq -er '.boxes[0].id' "$RESPONSE")
 SECOND_BOX_ID=$(jq -er '.boxes[1].id' "$RESPONSE")
 check_json '.status == "PLANNED" and .batchStatus == "CONFIRMED" and all(.boxes[]; .status == "FORMED" and .storagePlace == null)' 'Планирование не должно менять коробки и занимать места'

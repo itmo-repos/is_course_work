@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 import ru.ifmo.is.backend.dto.batch.BatchIdentificationView;
+import ru.ifmo.is.backend.dto.pass.IssuedPass;
 import ru.ifmo.is.backend.dto.storage.ChamberView;
 import ru.ifmo.is.backend.dto.storage.IntakeSessionView;
 import ru.ifmo.is.backend.dto.storage.StoragePlaceView;
@@ -38,6 +39,7 @@ public class IntakeService {
     private final AccessService access;
     private final BoxStorageService boxStorage;
     private final EntityManager entityManager;
+    private final VaultPassService passes;
 
     public BatchIdentificationView identify(AuthPrincipal principal, String barcode) {
         access.requireRole(principal, RoleCode.CURATOR);
@@ -91,7 +93,8 @@ public class IntakeService {
         session.setChamber(chamber);
         session.setPlannedDate(plannedDate);
         sessions.save(session);
-        return sessionView(session);
+        IssuedPass issuedPass = passes.syncIntakePass(session);
+        return sessionView(session, issuedPass);
     }
 
     @Transactional
@@ -107,7 +110,8 @@ public class IntakeService {
         }
         session.setChamber(lockActiveChamber(chamberId));
         session.setPlannedDate(plannedDate);
-        return sessionView(session);
+        IssuedPass issuedPass = passes.syncIntakePass(session);
+        return sessionView(session, issuedPass);
     }
 
     private void requireBeforeInspection(Batch batch) {
@@ -332,13 +336,17 @@ public class IntakeService {
     }
 
     private IntakeSessionView sessionView(IntakeSession session) {
+        return sessionView(session, null);
+    }
+
+    private IntakeSessionView sessionView(IntakeSession session, IssuedPass issuedPass) {
         List<StoredBoxView> contents = new ArrayList<>();
         for (Box box : boxes.findAllByBatch_IdOrderBySeqNoAsc(session.getBatch().getId())) {
             contents.add(boxView(box, true));
         }
         return new IntakeSessionView(session.getId(), session.getBatch().getId(), session.getBatch().getStatus(),
                 session.getCurator().getId(), session.getChamber().getId(), session.getPlannedDate(),
-                session.getStatus(), session.getCompletedAt(), contents);
+                session.getStatus(), session.getCompletedAt(), contents, issuedPass);
     }
 
     private StoredBoxView boxView(Box box, boolean curator) {

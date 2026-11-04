@@ -46,17 +46,7 @@ CREATE TRIGGER trg_chamber_updated_at
 CREATE OR REPLACE FUNCTION trg_access_event_immutable() RETURNS trigger
 LANGUAGE plpgsql AS $$
 BEGIN
-    IF TG_OP = 'DELETE' THEN
-        RAISE EXCEPTION 'Удаление события доступа запрещено';
-    END IF;
-
-    IF (NEW.pass_id, NEW.chamber_id, NEW.direction, NEW.occurred_at, NEW.employee_id)
-       IS DISTINCT FROM
-       (OLD.pass_id, OLD.chamber_id, OLD.direction, OLD.occurred_at, OLD.employee_id) THEN
-        RAISE EXCEPTION 'В событии доступа разрешено изменять только комментарий';
-    END IF;
-
-    RETURN NEW;
+    RAISE EXCEPTION 'Изменение и удаление события доступа запрещено';
 END;
 $$;
 

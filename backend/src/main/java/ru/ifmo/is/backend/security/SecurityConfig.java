@@ -39,6 +39,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/curator/**").hasRole("CURATOR")
                         .requestMatchers("/api/engineer/**").hasAnyRole("ENGINEER", "ADMIN")
+                        .requestMatchers("/api/security/**").hasAnyRole("SECURITY", "ADMIN")
                         .anyRequest().authenticated())
                 .exceptionHandling(errors -> errors
                         .authenticationEntryPoint((request, response, exception) -> response.sendError(401)))

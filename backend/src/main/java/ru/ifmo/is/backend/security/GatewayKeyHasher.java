@@ -3,31 +3,19 @@ package ru.ifmo.is.backend.security;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ResponseStatusException;
-
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
-import java.util.Base64;
-import java.util.HexFormat;
+import lombok.RequiredArgsConstructor;
 
 @Component
+@RequiredArgsConstructor
 public class GatewayKeyHasher {
-    private final SecureRandom random = new SecureRandom();
+    private final SecretTokenService tokens;
 
     public String generate() {
-        byte[] bytes = new byte[32];
-        random.nextBytes(bytes);
-        return "sgw_" + Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+        return "sgw_" + tokens.generate();
     }
 
     public String hash(String token) {
-        try {
-            byte[] hash = MessageDigest.getInstance("SHA-256").digest(token.getBytes(StandardCharsets.UTF_8));
-            return HexFormat.of().formatHex(hash);
-        } catch (NoSuchAlgorithmException exception) {
-            throw new IllegalStateException("SHA-256 недоступен", exception);
-        }
+        return tokens.hash(token);
     }
 
     public String hashAuthorization(String authorization) {

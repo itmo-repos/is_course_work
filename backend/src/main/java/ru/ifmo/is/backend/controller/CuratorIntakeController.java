@@ -3,6 +3,8 @@ package ru.ifmo.is.backend.controller;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.CacheControl;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import ru.ifmo.is.backend.dto.batch.BatchIdentificationView;
@@ -17,6 +19,8 @@ import ru.ifmo.is.backend.dto.storage.StoredBoxView;
 import ru.ifmo.is.backend.security.AuthPrincipal;
 import ru.ifmo.is.backend.services.ChamberMapService;
 import ru.ifmo.is.backend.services.IntakeService;
+import ru.ifmo.is.backend.services.VaultPassService;
+import ru.ifmo.is.backend.dto.pass.PassView;
 
 import java.util.List;
 
@@ -26,6 +30,12 @@ import java.util.List;
 public class CuratorIntakeController {
     private final IntakeService service;
     private final ChamberMapService chamberMapService;
+    private final VaultPassService passes;
+
+    @GetMapping("/intake-sessions/{id}/passes")
+    public List<PassView> passes(@AuthenticationPrincipal AuthPrincipal principal, @PathVariable Long id) {
+        return passes.intakePasses(principal, id);
+    }
 
     @GetMapping("/batches/by-barcode/{barcode}")
     public BatchIdentificationView identify(@AuthenticationPrincipal AuthPrincipal principal, @PathVariable String barcode) {
@@ -39,15 +49,17 @@ public class CuratorIntakeController {
 
     @PostMapping("/batches/{id}/intake-sessions")
     @ResponseStatus(HttpStatus.CREATED)
-    public IntakeSessionView create(@AuthenticationPrincipal AuthPrincipal principal, @PathVariable Long id,
+    public ResponseEntity<IntakeSessionView> create(@AuthenticationPrincipal AuthPrincipal principal, @PathVariable Long id,
                                @Valid @RequestBody IntakeSessionRequest request) {
-        return service.createSession(principal, id, request.chamberId(), request.plannedDate());
+        return ResponseEntity.status(HttpStatus.CREATED).cacheControl(CacheControl.noStore())
+                .body(service.createSession(principal, id, request.chamberId(), request.plannedDate()));
     }
 
     @PatchMapping("/intake-sessions/{id}")
-    public IntakeSessionView update(@AuthenticationPrincipal AuthPrincipal principal, @PathVariable Long id,
+    public ResponseEntity<IntakeSessionView> update(@AuthenticationPrincipal AuthPrincipal principal, @PathVariable Long id,
                               @Valid @RequestBody IntakeSessionRequest request) {
-        return service.updateSession(principal, id, request.chamberId(), request.plannedDate());
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+                .body(service.updateSession(principal, id, request.chamberId(), request.plannedDate()));
     }
 
     @GetMapping("/intake-sessions/{id}")

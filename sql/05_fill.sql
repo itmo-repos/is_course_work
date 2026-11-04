@@ -234,20 +234,19 @@ DO $$
 DECLARE
     v_pass_eng  bigint;
     v_pass_temp bigint;
-    v_code      varchar;
 BEGIN
+    -- В seed только хеши-заглушки без предъявляемых QR. Для прохода новый QR
+    -- выдаётся через API: открытые секреты в SQL не храним.
     -- Постоянный пропуск штатного инженера в камеру CH-1
-    v_code := 'P-' || to_char(nextval('pass_code_seq'), 'FM000000');
-    INSERT INTO vault_pass (code, employee_id, issued_by, valid_from, valid_to, comment)
-    VALUES (v_code, 4, 6, now() - interval '180 days', NULL,
+    INSERT INTO vault_pass (code_hash, employee_id, issued_by, valid_from, valid_to, comment)
+    VALUES ('6a92b5741998f481933e46c5cec05fb56431078587db8ac42e6d31a021e540bc', 4, 6, now() - interval '180 days', NULL,
             'Постоянный пропуск: обслуживание климатического оборудования')
     RETURNING id INTO v_pass_eng;
     INSERT INTO pass_chamber (pass_id, chamber_id) VALUES (v_pass_eng, 1);
 
     -- Временный пропуск подрядчика без привязки к сотруднику (п. 1.5.3)
-    v_code := 'P-' || to_char(nextval('pass_code_seq'), 'FM000000');
-    INSERT INTO vault_pass (code, employee_id, issued_by, valid_from, valid_to, comment)
-    VALUES (v_code, NULL, 6, now() - interval '2 days', now() + interval '1 day',
+    INSERT INTO vault_pass (code_hash, employee_id, issued_by, valid_from, valid_to, comment)
+    VALUES ('4c21e46f025be34b59d80f3269f2a9af877d6303a693f1d9a3d590d702d8ee31', NULL, 6, now() - interval '2 days', now() + interval '1 day',
             'Временный пропуск подрядчика по монтажу стеллажей')
     RETURNING id INTO v_pass_temp;
     INSERT INTO pass_chamber (pass_id, chamber_id) VALUES (v_pass_temp, 1);

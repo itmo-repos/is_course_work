@@ -25,8 +25,13 @@ section 'Просмотр климата, настройки камеры, ув�
 . "$DEMO_DIR/climate/check.sh"
 
 next_part
+section 'Пропуска и журнал проходов'
+. "$DEMO_DIR/access/check.sh"
+
+next_part
 section 'Приём, размещение и перемещение коробок'
 . "$DEMO_DIR/intake/check.sh"
+. "$DEMO_DIR/access/closed-intake.sh"
 
 next_part
 section 'Заявки и сессии изъятия'
