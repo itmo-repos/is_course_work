@@ -2,9 +2,9 @@
 # Часть общего сценария: запускается через demo/check-backend.sh.
 
 echo '0. Открываем SSH-туннель к Helios'
-command_line 'ssh -F ~/.ssh/config -N -L 8080:127.0.0.1:8080 helios'
+command_line 'ssh -F ~/.ssh/config -N -L 8080:127.0.0.1:46701 helios'
 ssh -F "$HOME/.ssh/config" -o BatchMode=yes -o ExitOnForwardFailure=yes \
-    -o ConnectTimeout=10 -N -L 8080:127.0.0.1:8080 helios \
+    -o ConnectTimeout=10 -N -L 8080:127.0.0.1:46701 helios \
     >"$TUNNEL_LOG" 2>&1 &
 TUNNEL_PID=$!
 sleep 3

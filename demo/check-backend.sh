@@ -43,6 +43,10 @@ section 'Сотрудники, роли и действующие сессии'
 . "$DEMO_DIR/employees/check.sh"
 
 next_part
+section 'Аудит, история партии и бизнес-уведомления'
+. "$DEMO_DIR/history/check.sh"
+
+next_part
 section 'Выход и проверка закрытия сессий'
 . "$DEMO_DIR/auth/logout.sh"
 
