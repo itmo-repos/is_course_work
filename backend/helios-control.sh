@@ -39,7 +39,7 @@ case "$ACTION" in
         ;;
     status)
         if running; then
-            echo "Backend is running (PID $(cat "$APP_DIR/backend.pid")). Log: $APP_DIR/backend.log"
+            echo "Backend is running (PID $(cat "$APP_DIR/backend.pid")), HTTP: 127.0.0.1:46701. Log: $APP_DIR/backend.log"
         else
             echo "Backend is not running"
             exit 1
@@ -57,11 +57,11 @@ case "$ACTION" in
         set -a
         . "$ENV_FILE"
         set +a
-        nohup java -Xms64m -Xmx512m -jar backend.jar >> backend.log 2>&1 </dev/null &
+        nohup java -Xms64m -Xmx512m -jar backend.jar --server.address=127.0.0.1 --server.port=46701 >> backend.log 2>&1 </dev/null &
         echo "$!" > "$APP_DIR/backend.pid"
         sleep 2
         if running; then
-            echo "Backend started (PID $(cat "$APP_DIR/backend.pid")). Log: $APP_DIR/backend.log"
+            echo "Backend started (PID $(cat "$APP_DIR/backend.pid")), HTTP: 127.0.0.1:46701. Log: $APP_DIR/backend.log"
         else
             rm -f "$APP_DIR/backend.pid"
             echo "Backend failed to start; check $APP_DIR/backend.log" >&2
