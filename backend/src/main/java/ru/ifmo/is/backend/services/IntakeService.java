@@ -29,6 +29,7 @@ import java.util.List;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class IntakeService {
+    private final BusinessEventService events;
     private final BatchRepository batches;
     private final BatchAccessService batchAccess;
     private final StoragePlaceMapper placeMapper;
@@ -74,6 +75,7 @@ public class IntakeService {
         }
         batch.setStatus(BatchStatus.INSPECTION);
         batches.flush();
+        events.batch(principal, batch, "BATCH_INSPECTION", "Начат досмотр партии, места зарезервированы");
         return boxStorage.getBatchByBarcode(barcode.strip());
     }
 
@@ -94,6 +96,7 @@ public class IntakeService {
         session.setPlannedDate(plannedDate);
         sessions.save(session);
         IssuedPass issuedPass = passes.syncIntakePass(session);
+        events.intake(principal, session, "INTAKE_PLANNED", "Приём партии запланирован на " + plannedDate);
         return sessionView(session, issuedPass);
     }
 
@@ -111,6 +114,7 @@ public class IntakeService {
         session.setChamber(lockActiveChamber(chamberId));
         session.setPlannedDate(plannedDate);
         IssuedPass issuedPass = passes.syncIntakePass(session);
+        events.intake(principal, session, "INTAKE_RESCHEDULED", "План приёма изменён: " + plannedDate);
         return sessionView(session, issuedPass);
     }
 
@@ -184,6 +188,7 @@ public class IntakeService {
             throw conflict("При приёме место должно находиться в камере сессии");
         }
         box.setStoragePlace(target);
+        events.box(principal, box, "BOX_PLACE_CHANGED", "Изменено назначение места коробки #" + boxId);
         return boxView(box, true);
     }
 
@@ -204,7 +209,8 @@ public class IntakeService {
         lockFreePlace(box.getStoragePlace().getId(), boxId);
         box.setStatus(BoxStatus.PLACED);
         box.setPlacedAt(OffsetDateTime.now());
-        finishIntake(session);
+        events.box(principal, box, "BOX_PLACED", "Размещена коробка #" + boxId);
+        finishIntake(session, principal);
         return boxView(box, true);
     }
 
@@ -219,7 +225,8 @@ public class IntakeService {
         box.setWriteOffReason(reason.strip());
         box.setWrittenOffAt(OffsetDateTime.now());
         box.setStoragePlace(null);
-        finishIntake(session);
+        events.box(principal, box, "BOX_WRITTEN_OFF", "Списана коробка #" + boxId);
+        finishIntake(session, principal);
         return boxView(box, true);
     }
 
@@ -240,6 +247,7 @@ public class IntakeService {
         box.setStoragePlace(target);
         box.setStatus(BoxStatus.AWAITING_PLACEMENT);
         box.setPlacedAt(null);
+        events.box(principal, box, "BOX_MOVE_STARTED", "Начато перемещение коробки #" + boxId);
         return boxView(box, true);
     }
 
@@ -252,7 +260,7 @@ public class IntakeService {
         return result;
     }
 
-    private void finishIntake(IntakeSession session) {
+    private void finishIntake(IntakeSession session, AuthPrincipal principal) {
         // При перемещении после приёма его исторический итог не пересчитывается.
         if (session.getStatus() != SessionStatus.PLANNED) {
             return;
@@ -277,6 +285,8 @@ public class IntakeService {
         session.getBatch().setStatus(result);
         session.setStatus(SessionStatus.COMPLETED);
         session.setCompletedAt(OffsetDateTime.now());
+        events.intake(principal, session, "INTAKE_COMPLETED", "Приём партии завершён");
+        events.batch(principal, session.getBatch(), "BATCH_" + result.name(), "Итог размещения партии: " + result);
     }
 
     private Box lockBox(Long boxId) {

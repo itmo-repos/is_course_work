@@ -28,6 +28,7 @@ import java.util.Locale;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class BatchService {
+    private final BusinessEventService events;
     private final BatchRepository batches;
     private final BoxRepository boxes;
     private final SampleRepository samples;
@@ -48,6 +49,7 @@ public class BatchService {
         batch.setDesiredShipmentDate(data.desiredShipmentDate());
         batches.save(batch);
         saveContents(batch, data);
+        events.batch(principal, batch, "BATCH_CREATED", "Сформирована партия " + batch.getNumber());
         return view(batch);
     }
 
@@ -85,6 +87,7 @@ public class BatchService {
         // UPDATE запускает SQL-триггер, заполняющий barcode коробок.
         batches.flush();
         entityManager.clear();
+        events.batch(principal, batchAccess.find(id), "BATCH_CONFIRMED", "Партия подтверждена");
         return view(batchAccess.find(id));
     }
 
@@ -95,6 +98,7 @@ public class BatchService {
         requireStatus(batch, BatchStatus.FORMED);
         batch.setStatus(BatchStatus.REJECTED);
         batch.setRejectionReason(reason.strip());
+        events.batch(principal, batch, "BATCH_REJECTED", "Партия отклонена: " + batch.getRejectionReason());
         return view(batch);
     }
 
@@ -112,6 +116,7 @@ public class BatchService {
         batch.setRejectionReason(null);
         batch.setStatus(BatchStatus.FORMED);
         saveContents(batch, data);
+        events.batch(principal, batch, "BATCH_RESUBMITTED", "Партия исправлена и отправлена повторно");
         return view(batch);
     }
 
@@ -131,6 +136,7 @@ public class BatchService {
         if (trackingNumber != null) {
             batch.setTrackingNumber(trackingNumber.isBlank() ? null : trackingNumber.strip());
         }
+        events.batch(principal, batch, "BATCH_" + status.name(), "Транспортный статус партии: " + status);
         return view(batch);
     }
 

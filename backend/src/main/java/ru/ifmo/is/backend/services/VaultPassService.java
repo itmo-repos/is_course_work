@@ -28,6 +28,7 @@ import java.util.List;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class VaultPassService {
+    private final AuditService audit;
     private final VaultPassRepository passes;
     private final EmployeeRepository employees;
     private final ChamberRepository chambers;
@@ -63,6 +64,7 @@ public class VaultPassService {
         pass.setValidTo(to);
         pass.setComment(request.comment());
         passes.save(pass);
+        audit.record(principal, "PASS_ISSUED", "PASS", pass.getId(), null, "Выдан пропуск #" + pass.getId());
         return issued(pass, code);
     }
 
@@ -85,6 +87,7 @@ public class VaultPassService {
         pass.setStatus(PassStatus.REVOKED);
         pass.setRevokedBy(access.requireStaff(principal));
         pass.setRevokedAt(LocalDateTime.now(ZoneOffset.UTC));
+        audit.record(principal, "PASS_REVOKED", "PASS", id, pass.getIntakeSession() == null ? null : pass.getIntakeSession().getBatch().getId(), "Пропуск отозван");
         return view(pass);
     }
 
@@ -120,6 +123,7 @@ public class VaultPassService {
         pass.getChambers().clear();
         pass.getChambers().add(session.getChamber());
         passes.save(pass);
+        if (code != null) audit.employee(session.getCurator().getId(), "PASS_ISSUED", "PASS", pass.getId(), session.getBatch().getId(), "Выдан временный пропуск куратора");
         return code == null ? null : issued(pass, code);
     }
 

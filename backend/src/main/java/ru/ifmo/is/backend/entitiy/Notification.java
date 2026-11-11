@@ -21,8 +21,16 @@ public class Notification {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "employee_id", nullable = false)
+    @JoinColumn(name = "employee_id")
     private Employee employee;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "depositor_id")
+    private Depositor depositor;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "audit_event_id")
+    private AuditEvent event;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "reading_id")

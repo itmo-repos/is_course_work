@@ -29,6 +29,7 @@ import java.util.Set;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class WithdrawalService {
+    private final BusinessEventService events;
     private final WithdrawalRequestRepository requests;
     private final WithdrawalSessionRepository sessions;
     private final BatchAccessService batchAccess;
@@ -70,6 +71,7 @@ public class WithdrawalService {
         request.setDesiredDate(desiredDate);
         request.setBoxes(selected);
         requests.save(request);
+        events.withdrawal(principal, request, "WITHDRAWAL_SUBMITTED", "Подана заявка на изъятие #" + request.getId());
         return requestView(request);
     }
 
@@ -116,6 +118,7 @@ public class WithdrawalService {
         requireStatus(request, WithdrawalStatus.SUBMITTED);
         request.setCurator(curator);
         request.setStatus(WithdrawalStatus.CURATOR_REVIEW);
+        events.withdrawal(principal, request, "WITHDRAWAL_REVIEW_STARTED", "Начата проверка заявки на изъятие #" + request.getId());
         return requestView(request);
     }
 
@@ -128,6 +131,7 @@ public class WithdrawalService {
         request.setCurator(curator);
         request.setCuratorDecisionAt(OffsetDateTime.now());
         request.setStatus(WithdrawalStatus.LEGAL_APPROVAL);
+        events.withdrawal(principal, request, "WITHDRAWAL_LEGAL_APPROVAL", "Заявка передана на юридическое утверждение #" + request.getId());
         return requestView(request);
     }
 
@@ -140,6 +144,7 @@ public class WithdrawalService {
         request.setCuratorDecisionAt(OffsetDateTime.now());
         request.setRejectionReason(reason.strip());
         request.setStatus(WithdrawalStatus.REJECTED);
+        events.withdrawal(principal, request, "WITHDRAWAL_REJECTED", "Куратор отклонил заявку на изъятие #" + request.getId());
         return requestView(request);
     }
 
@@ -152,6 +157,7 @@ public class WithdrawalService {
         request.setAdmin(admin);
         request.setAdminDecisionAt(OffsetDateTime.now());
         request.setStatus(WithdrawalStatus.APPROVED);
+        events.withdrawal(principal, request, "WITHDRAWAL_APPROVED", "Администратор одобрил изъятие #" + request.getId());
         return requestView(request);
     }
 
@@ -164,6 +170,7 @@ public class WithdrawalService {
         request.setAdminDecisionAt(OffsetDateTime.now());
         request.setRejectionReason(reason.strip());
         request.setStatus(WithdrawalStatus.REJECTED);
+        events.withdrawal(principal, request, "WITHDRAWAL_REJECTED", "Администратор отклонил заявку на изъятие #" + request.getId());
         return requestView(request);
     }
 
@@ -182,6 +189,7 @@ public class WithdrawalService {
         session.setPlannedDate(plannedDate);
         session.setBoxes(new ArrayList<>(request.getBoxes()));
         sessions.save(session);
+        events.withdrawal(principal, request, "WITHDRAWAL_SESSION_PLANNED", "Сессия изъятия запланирована, заявка #" + request.getId());
         return sessionView(session);
     }
 
@@ -198,6 +206,7 @@ public class WithdrawalService {
         requireStatus(session.getRequest(), WithdrawalStatus.APPROVED);
         session.setPlannedDate(plannedDate);
         session.setUpdatedAt(OffsetDateTime.now());
+        events.withdrawal(principal, session.getRequest(), "WITHDRAWAL_RESCHEDULED", "Изъятие перенесено на " + plannedDate);
         return sessionView(session);
     }
 
@@ -226,7 +235,12 @@ public class WithdrawalService {
         // Существующий SQL-триггер выдаёт коробки, освобождает места и ставит заявке FULFILLED.
         sessions.flush();
         entityManager.clear();
-        return sessionView(findSession(id));
+        WithdrawalSession completed = findSession(id);
+        for (Box box : completed.getBoxes()) {
+            events.box(principal, box, "BOX_WITHDRAWN", "Изъята коробка #" + box.getId());
+        }
+        events.withdrawal(principal, completed.getRequest(), "WITHDRAWAL_FULFILLED", "Изъятие завершено, коробки выданы");
+        return sessionView(completed);
     }
 
     private void validateForWithdrawal(WithdrawalRequest request) {

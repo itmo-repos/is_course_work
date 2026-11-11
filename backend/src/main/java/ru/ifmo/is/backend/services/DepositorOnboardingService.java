@@ -36,6 +36,7 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class DepositorOnboardingService {
+    private final BusinessEventService events;
     private static final long MAX_SCAN_BYTES = 15L * 1024 * 1024;
 
     private final AccessService access;
@@ -78,7 +79,9 @@ public class DepositorOnboardingService {
         depositor.setContactPhone(blankToNull(data.contactPhone()));
         depositor.setPasswordHash(passwordEncoder.encode(data.password()));
         depositor.setStatus(DepositorStatus.NEW_REQUEST);
-        return view(depositorRepository.save(depositor));
+        depositorRepository.save(depositor);
+        events.depositor(null, depositor, "APPLICATION_SUBMITTED", "Подана заявка депозитора #" + depositor.getId());
+        return view(depositor);
     }
 
     @Transactional(readOnly = true)
@@ -111,6 +114,7 @@ public class DepositorOnboardingService {
         contract.setUpdatedAt(OffsetDateTime.now());
         depositor.setStatus(DepositorStatus.VERIFICATION);
         depositor.setRejectionReason(null);
+        events.depositor(principal, depositor, "CONTRACT_SCAN_UPLOADED", "Скан договора загружен на проверку");
         return view(depositorRepository.save(depositor));
     }
 
@@ -154,6 +158,7 @@ public class DepositorOnboardingService {
 
         depositor.setStatus(DepositorStatus.AWAITING_CONTRACT);
         depositor.setRejectionReason(null);
+        events.depositor(principal, depositor, "APPLICATION_APPROVED", "Заявка одобрена, договор ожидает подписания");
         return view(depositorRepository.save(depositor));
     }
 
@@ -164,6 +169,7 @@ public class DepositorOnboardingService {
         requireStatus(depositor, DepositorStatus.NEW_REQUEST);
         depositor.setStatus(DepositorStatus.REJECTED);
         depositor.setRejectionReason(requiredReason(reason));
+        events.depositor(principal, depositor, "APPLICATION_REJECTED", "Заявка отклонена");
         return view(depositorRepository.save(depositor));
     }
 
@@ -184,6 +190,7 @@ public class DepositorOnboardingService {
         contractRepository.save(contract);
         depositor.setStatus(DepositorStatus.ACTIVE);
         depositor.setRejectionReason(null);
+        events.depositor(reviewer, depositor, "CONTRACT_VERIFIED", "Договор проверен, депозитор активирован");
         return view(depositorRepository.save(depositor));
     }
 
@@ -200,6 +207,7 @@ public class DepositorOnboardingService {
         contractRepository.save(contract);
         depositor.setStatus(DepositorStatus.CONTRACT_REJECTED);
         depositor.setRejectionReason(rejectionReason);
+        events.depositor(principal, depositor, "CONTRACT_REJECTED", "Договор отклонён");
         return view(depositorRepository.save(depositor));
     }
 
@@ -218,6 +226,7 @@ public class DepositorOnboardingService {
         contractRepository.save(contract);
         depositor.setStatus(DepositorStatus.AWAITING_CONTRACT);
         depositor.setRejectionReason(null);
+        events.depositor(principal, depositor, "CONTRACT_RETURNED", "Договор возвращён на переподписание");
         return view(depositorRepository.save(depositor));
     }
 
@@ -228,6 +237,7 @@ public class DepositorOnboardingService {
         requireStatus(depositor, DepositorStatus.CONTRACT_REJECTED);
         depositor.setStatus(DepositorStatus.REJECTED);
         depositor.setRejectionReason(requiredReason(reason));
+        events.depositor(principal, depositor, "APPLICATION_REJECTED_FINALLY", "Заявка окончательно отклонена");
         return view(depositorRepository.save(depositor));
     }
 

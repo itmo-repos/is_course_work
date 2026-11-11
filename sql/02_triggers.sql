@@ -120,4 +120,28 @@ CREATE TRIGGER trg_intake_session_passes
     AFTER UPDATE OF status ON intake_session
     FOR EACH ROW EXECUTE FUNCTION trg_intake_session_close_passes();
 
+CREATE OR REPLACE FUNCTION trg_audit_event_immutable() RETURNS trigger
+LANGUAGE plpgsql AS $$
+BEGIN
+    RAISE EXCEPTION 'Изменение и удаление события аудита запрещено';
+END;
+$$;
+CREATE TRIGGER trg_audit_event_protect BEFORE UPDATE OR DELETE ON audit_event
+    FOR EACH ROW EXECUTE FUNCTION trg_audit_event_immutable();
+
+CREATE OR REPLACE FUNCTION trg_pass_expired_audit() RETURNS trigger
+LANGUAGE plpgsql AS $$
+BEGIN
+    IF NEW.status = 'EXPIRED' AND OLD.status IS DISTINCT FROM NEW.status THEN
+        INSERT INTO audit_event(actor_type, action, entity_type, entity_id, batch_id, message)
+        VALUES ('SYSTEM', 'PASS_EXPIRED', 'PASS', NEW.id,
+                (SELECT batch_id FROM intake_session WHERE id=NEW.intake_session_id),
+                'Срок действия пропуска завершён');
+    END IF;
+    RETURN NULL;
+END;
+$$;
+CREATE TRIGGER trg_pass_expired_audit AFTER UPDATE OF status ON vault_pass
+    FOR EACH ROW EXECUTE FUNCTION trg_pass_expired_audit();
+
 COMMIT;

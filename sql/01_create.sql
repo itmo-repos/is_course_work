@@ -241,7 +241,9 @@ CREATE TABLE gateway_key (
 
 CREATE TABLE notification (
     id          bigserial PRIMARY KEY,
-    employee_id bigint            NOT NULL REFERENCES employee(id)        ON DELETE CASCADE,
+    employee_id bigint            REFERENCES employee(id) ON DELETE CASCADE,
+    depositor_id bigint           REFERENCES depositor(id) ON DELETE CASCADE,
+    audit_event_id bigint,
     reading_id  bigint            REFERENCES climate_reading(id)          ON DELETE CASCADE,
     type        notification_type NOT NULL,
     parameter   climate_parameter,
@@ -249,7 +251,10 @@ CREATE TABLE notification (
     is_read     boolean           NOT NULL DEFAULT false,
     created_at  timestamp       NOT NULL DEFAULT now(),
     -- один и тот же инцидент не рассылается сотруднику дважды
-    CONSTRAINT uq_notification_incident UNIQUE (employee_id, reading_id, parameter)
+    CONSTRAINT uq_notification_incident UNIQUE (employee_id, reading_id, parameter),
+    CONSTRAINT chk_notification_recipient CHECK (num_nonnulls(employee_id, depositor_id) = 1),
+    CONSTRAINT uq_notification_employee_event UNIQUE (employee_id, audit_event_id),
+    CONSTRAINT uq_notification_depositor_event UNIQUE (depositor_id, audit_event_id)
 );
 
 -- партия, коробки, образцы. Последовательное уточнение, слоситая структура
@@ -412,5 +417,22 @@ CREATE TABLE access_event (
     comment       text,
     registered_by bigint           REFERENCES employee(id) ON DELETE SET NULL
 );
+
+-- Универсальный журнал: идентификаторы акторов и объектов остаются историческими
+-- даже после удаления ключа шлюза. Сообщения и детали заполняет только сервер.
+CREATE TABLE audit_event (
+    id bigserial PRIMARY KEY,
+    actor_type varchar(32) NOT NULL CHECK (actor_type IN ('EMPLOYEE','DEPOSITOR','GUEST','GATEWAY','SYSTEM')),
+    actor_id bigint,
+    action varchar(80) NOT NULL,
+    entity_type varchar(40) NOT NULL,
+    entity_id bigint,
+    batch_id bigint,
+    message text NOT NULL,
+    details text,
+    occurred_at timestamp NOT NULL DEFAULT (clock_timestamp() AT TIME ZONE 'UTC')
+);
+ALTER TABLE notification ADD CONSTRAINT fk_notification_audit
+    FOREIGN KEY (audit_event_id) REFERENCES audit_event(id) ON DELETE RESTRICT;
 
 COMMIT;

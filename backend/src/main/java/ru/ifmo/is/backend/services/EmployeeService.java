@@ -21,6 +21,7 @@ import java.util.Set;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class EmployeeService {
+    private final AuditService audit;
     private final EmployeeRepository employees;
     private final EmployeeRoleRepository assignments;
     private final RoleRepository roles;
@@ -64,6 +65,7 @@ public class EmployeeService {
             assignments.save(assignment);
         }
         assignments.flush();
+        audit.record(principal, "EMPLOYEE_ROLES_CHANGED", "EMPLOYEE", id, null, "Изменены роли сотрудника #" + id, "roles=" + requested.stream().map(Enum::name).sorted().toList());
         return view(employee);
     }
 
@@ -73,6 +75,7 @@ public class EmployeeService {
         keepActiveAdmin(employee, active && employees.findRoleCodes(id).contains(RoleCode.ADMIN));
         if (employee.isActive() && !active) employee.setSessionVersion(employee.getSessionVersion() + 1);
         employee.setActive(active);
+        audit.record(principal, active ? "EMPLOYEE_ENABLED" : "EMPLOYEE_DISABLED", "EMPLOYEE", id, null, active ? "Учётная запись включена" : "Учётная запись отключена");
         return view(employee);
     }
 

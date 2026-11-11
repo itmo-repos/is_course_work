@@ -1,4 +1,8 @@
 -- Климат 
+CREATE INDEX idx_audit_time ON audit_event (occurred_at DESC, id DESC);
+CREATE INDEX idx_audit_batch ON audit_event (batch_id, occurred_at, id);
+CREATE INDEX idx_audit_object ON audit_event (entity_type, entity_id, occurred_at DESC);
+CREATE INDEX idx_notification_depositor ON notification (depositor_id, created_at DESC, id DESC);
 
 -- поиск записей климата по камере и времени замера
 CREATE INDEX idx_climate_recent

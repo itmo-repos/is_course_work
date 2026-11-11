@@ -1,5 +1,7 @@
 
 BEGIN;
+DROP TABLE IF EXISTS notification;
+DROP TABLE IF EXISTS audit_event;
 
 -- таблицы + триггеры удалятся автоматически
 DROP TABLE IF EXISTS access_event;
@@ -16,7 +18,6 @@ DROP TABLE IF EXISTS sample;
 DROP TABLE IF EXISTS box;
 DROP TABLE IF EXISTS batch;
 
-DROP TABLE IF EXISTS notification;
 DROP TABLE IF EXISTS gateway_key;
 DROP TABLE IF EXISTS climate_reading;
 DROP TABLE IF EXISTS storage_place;
@@ -42,6 +43,8 @@ DROP FUNCTION IF EXISTS trg_access_event_immutable() CASCADE;
 DROP FUNCTION IF EXISTS trg_ws_complete() CASCADE;
 DROP FUNCTION IF EXISTS trg_batch_generate_barcodes() CASCADE;
 DROP FUNCTION IF EXISTS trg_intake_session_close_passes() CASCADE;
+DROP FUNCTION IF EXISTS trg_audit_event_immutable() CASCADE;
+DROP FUNCTION IF EXISTS trg_pass_expired_audit() CASCADE;
 
 -- Последовательности и типы
 

@@ -31,6 +31,7 @@ import java.util.List;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class ClimateService {
+    private final AuditService audit;
     private final ChamberRepository chambers;
     private final ClimateReadingRepository readings;
     private final BoxRepository boxes;
@@ -67,6 +68,7 @@ public class ClimateService {
         chamber.setMaxTemperature(request.maxTemperature());
         chamber.setMinHumidity(request.minHumidity());
         chamber.setMaxHumidity(request.maxHumidity());
+        audit.record(principal, "CHAMBER_CONFIGURED", "CHAMBER", chamberId, null, "Изменены настройки камеры", "status=" + chamber.getStatus() + "; climateControlled=" + chamber.isClimateControlled() + "; temperature=" + chamber.getMinTemperature() + ".." + chamber.getMaxTemperature() + "; humidity=" + chamber.getMinHumidity() + ".." + chamber.getMaxHumidity());
         return view(chamber);
     }
 

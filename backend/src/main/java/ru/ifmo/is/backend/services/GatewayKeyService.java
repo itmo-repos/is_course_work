@@ -23,6 +23,7 @@ import java.util.List;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class GatewayKeyService {
+    private final AuditService audit;
     private final GatewayKeyRepository keys;
     private final ChamberRepository chambers;
     private final AccessService access;
@@ -40,6 +41,7 @@ public class GatewayKeyService {
         key.setIssuedBy(admin);
         keys.save(key);
         // Сырой ключ возвращается только здесь; в БД сохраняется только его хеш.
+        audit.record(principal, "GATEWAY_KEY_ISSUED", "GATEWAY_KEY", key.getId(), null, "Выдан ключ шлюза", "chamberId=" + chamberId);
         return new IssuedGatewayKey(view(key), token);
     }
 
@@ -54,6 +56,7 @@ public class GatewayKeyService {
         access.requireRole(principal, RoleCode.ADMIN);
         GatewayKey key = keys.findByIdForUpdate(id).orElseThrow(() ->
                 new ResponseStatusException(HttpStatus.NOT_FOUND, "Ключ шлюза не найден"));
+        audit.record(principal, "GATEWAY_KEY_DELETED", "GATEWAY_KEY", id, null, "Удалён ключ шлюза", "chamberId=" + key.getChamber().getId());
         keys.delete(key);
     }
 

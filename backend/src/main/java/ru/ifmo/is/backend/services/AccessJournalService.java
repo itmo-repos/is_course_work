@@ -23,6 +23,7 @@ import java.time.ZoneOffset;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class AccessJournalService {
+    private final AuditService audit;
     private final AccessEventRepository events;
     private final VaultPassService passes;
     private final ChamberRepository chambers;
@@ -59,7 +60,9 @@ public class AccessJournalService {
         event.setOccurredAt(now);
         event.setComment(request.comment());
         event.setRegisteredBy(registrar);
-        return view(events.save(event));
+        events.save(event);
+        audit.record(principal, "ACCESS_REGISTERED", "ACCESS_EVENT", event.getId(), null, "Зарегистрирован проход: " + request.direction(), "passId=" + pass.getId() + "; chamberId=" + chamber.getId());
+        return view(event);
     }
 
     public PageView<AccessEventView> history(AuthPrincipal principal, Long passId, Long employeeId, Long chamberId,

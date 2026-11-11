@@ -14,6 +14,7 @@ import ru.ifmo.is.backend.security.AuthPrincipal;
 @Service
 @RequiredArgsConstructor
 public class SpeciesService {
+    private final AuditService audit;
     private final DepositorAccessService depositorAccess;
     private final SpeciesRepository species;
     private final JdbcTemplate jdbc;
@@ -36,6 +37,7 @@ public class SpeciesService {
         created.setLocalName(localName);
         created.setFamily(family);
         species.save(created);
+        audit.record(principal, "SPECIES_CREATED", "SPECIES", created.getId(), null, "Добавлен вид " + created.getLatinName());
         return new SpeciesView(created.getId(), created.getLatinName(), created.getLocalName(), created.getFamily());
     }
 

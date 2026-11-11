@@ -24,12 +24,14 @@ import org.springframework.web.server.ResponseStatusException;
 import ru.ifmo.is.backend.dto.auth.CsrfResponse;
 import ru.ifmo.is.backend.dto.auth.LoginRequest;
 import ru.ifmo.is.backend.dto.auth.MeResponse;
+import ru.ifmo.is.backend.services.AuditService;
 
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
 public class AuthController {
     private final AuthenticationManager authenticationManager;
+    private final AuditService audit;
     private final CsrfTokenRepository csrfTokenRepository;
     private final SecurityContextRepository securityContextRepository = new HttpSessionSecurityContextRepository();
 
@@ -45,6 +47,7 @@ public class AuthController {
         try {
             Authentication authentication = authenticationManager.authenticate(
                     UsernamePasswordAuthenticationToken.unauthenticated(body.email(), body.password()));
+            audit.login((AuthPrincipal) authentication.getPrincipal());
             request.getSession(true);
             request.changeSessionId();
             SecurityContext context = SecurityContextHolder.createEmptyContext();

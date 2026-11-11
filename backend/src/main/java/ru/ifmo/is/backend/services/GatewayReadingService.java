@@ -28,6 +28,7 @@ import java.time.temporal.ChronoUnit;
 @Service
 @RequiredArgsConstructor
 public class GatewayReadingService {
+    private final AuditService audit;
     private final GatewayKeyRepository keys;
     private final GatewayKeyHasher hasher;
     private final ChamberRepository chambers;
@@ -69,6 +70,7 @@ public class GatewayReadingService {
         reading.setTemperature(request.temperature());
         reading.setHumidity(request.humidity());
         readings.save(reading);
+        audit.gateway(key.getId(), reading.getId(), chamber.getId());
         notifyIfOutsideBounds(reading);
         return mapper.reading(reading);
     }

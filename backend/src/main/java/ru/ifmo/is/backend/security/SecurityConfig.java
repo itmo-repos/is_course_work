@@ -12,12 +12,14 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.csrf.HttpSessionCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfFilter;
+import ru.ifmo.is.backend.services.AuditService;
 
 @Configuration
 @RequiredArgsConstructor
 public class SecurityConfig {
     private final AccountAuthenticationProvider accountAuthenticationProvider;
     private final EmployeeSessionService employeeSessions;
+    private final AuditService audit;
 
     @Bean
     AuthenticationManager authenticationManager() {
@@ -53,7 +55,12 @@ public class SecurityConfig {
                 .httpBasic(basic -> basic.disable())
                 .logout(logout -> logout
                         .logoutUrl("/api/auth/logout")
-                        .logoutSuccessHandler((request, response, authentication) -> response.setStatus(204)));
+                        .logoutSuccessHandler((request, response, authentication) -> {
+                            if (authentication != null && authentication.getPrincipal() instanceof AuthPrincipal principal) {
+                                audit.logout(principal);
+                            }
+                            response.setStatus(204);
+                        }));
         return http.build();
     }
 }
