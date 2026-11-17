@@ -1,4 +1,15 @@
 -- Климат 
+-- Отчёты: владельцы партий, последний проверенный договор, фактические события.
+CREATE INDEX idx_report_batch_depositor ON batch (depositor_id);
+CREATE INDEX idx_report_contract_verified ON contract (depositor_id, verified_at DESC, id DESC)
+    WHERE status='VERIFIED';
+CREATE INDEX idx_report_withdrawal_completed ON withdrawal_session (completed_at, id)
+    WHERE status='COMPLETED';
+CREATE INDEX idx_report_shipment ON audit_event (occurred_at, batch_id, id)
+    WHERE action IN ('BATCH_IN_TRANSIT','BATCH_ARRIVED');
+CREATE INDEX idx_report_climate_incident ON climate_reading (measured_at, id, chamber_id)
+    WHERE temperature < min_temperature OR temperature > max_temperature
+       OR humidity < min_humidity OR humidity > max_humidity;
 CREATE INDEX idx_audit_time ON audit_event (occurred_at DESC, id DESC);
 CREATE INDEX idx_audit_batch ON audit_event (batch_id, occurred_at, id);
 CREATE INDEX idx_audit_object ON audit_event (entity_type, entity_id, occurred_at DESC);

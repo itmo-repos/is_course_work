@@ -29,4 +29,14 @@ public class ClimateReading {
 
     @Column(nullable = false, precision = 5, scale = 2)
     private BigDecimal humidity;
+
+    // Границы на момент приёма: отчёт о прошлом не зависит от последующих настроек камеры.
+    @Column(name = "min_temperature", nullable = false, precision = 5, scale = 2)
+    private BigDecimal minTemperature;
+    @Column(name = "max_temperature", nullable = false, precision = 5, scale = 2)
+    private BigDecimal maxTemperature;
+    @Column(name = "min_humidity", nullable = false, precision = 5, scale = 2)
+    private BigDecimal minHumidity;
+    @Column(name = "max_humidity", nullable = false, precision = 5, scale = 2)
+    private BigDecimal maxHumidity;
 }

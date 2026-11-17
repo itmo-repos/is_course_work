@@ -69,6 +69,10 @@ public class GatewayReadingService {
         reading.setMeasuredAt(time);
         reading.setTemperature(request.temperature());
         reading.setHumidity(request.humidity());
+        reading.setMinTemperature(chamber.getMinTemperature());
+        reading.setMaxTemperature(chamber.getMaxTemperature());
+        reading.setMinHumidity(chamber.getMinHumidity());
+        reading.setMaxHumidity(chamber.getMaxHumidity());
         readings.save(reading);
         audit.gateway(key.getId(), reading.getId(), chamber.getId());
         notifyIfOutsideBounds(reading);

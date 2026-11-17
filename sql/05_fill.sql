@@ -5,6 +5,7 @@
 -- сведен к трем справочным функциям. Поэтому ниже те же сценарии выражены
 -- напрямую через INSERT/UPDATE по текущим таблицам и ограничениям.
 
+SET TIME ZONE 'UTC';
 BEGIN;
 
 INSERT INTO country (code, name) VALUES

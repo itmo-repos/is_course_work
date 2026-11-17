@@ -222,6 +222,11 @@ CREATE TABLE climate_reading (
     measured_at timestamp  NOT NULL DEFAULT now(),
     temperature numeric(5,2) NOT NULL,
     humidity    numeric(5,2) NOT NULL,
+    min_temperature numeric(5,2) NOT NULL,
+    max_temperature numeric(5,2) NOT NULL,
+    min_humidity numeric(5,2) NOT NULL,
+    max_humidity numeric(5,2) NOT NULL,
+    CONSTRAINT chk_reading_bounds CHECK (min_temperature < max_temperature AND min_humidity < max_humidity),
     CONSTRAINT uq_climate_reading UNIQUE (chamber_id, measured_at),
     CONSTRAINT chk_climate_hum  CHECK (humidity BETWEEN 0 AND 100),
     CONSTRAINT chk_climate_temp CHECK (temperature BETWEEN -80 AND 60)
