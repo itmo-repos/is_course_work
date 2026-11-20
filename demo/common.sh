@@ -87,7 +87,7 @@ command_line() { printf '%s> %s%s\n' "$COMMAND_COLOR" "$1" "$RESET_COLOR"; }
 output() {
     if [ ! -s "$RESPONSE" ]; then return; fi
     printf '← Ответ (фрагмент):\n'
-    if ! jq -M --arg path "${1:-}" \
+    if ! jq -M --arg scenario "${DEMO_SCENARIO:-}" --arg path "${1:-}" \
         --argjson box "${BOX_ID:-null}" --argjson secondBox "${SECOND_BOX_ID:-null}" \
         --argjson firstPlace "${FIRST_PLACE_ID:-null}" --argjson secondPlace "${SECOND_PLACE_ID:-null}" \
         --argjson replacementPlace "${REPLACEMENT_PLACE_ID:-null}" \

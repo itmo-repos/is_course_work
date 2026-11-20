@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Один сквозной сценарий. Подключается из check-backend.sh.
+# Путь депозитора: регистрация, хранение, возврат коллекции.
 
 section '1. Новая организация получает право передать коллекцию'
 step PUBLIC 'Представитель организации смотрит каталог и справочники для паспортов'
@@ -43,18 +43,10 @@ step ADMIN 'Исправленный договор принят — орган�
 request POST "/api/admin/depositors/$APPLICANT_ID/contract/verify" 200
 check_json '.status == "ACTIVE"' 'Договор не активирован'
 
+
 next_part
-section '2. Администратор назначает куратора, депозитор готовит партию'
-step ADMIN 'Администратор смотрит сотрудников и доступные роли'
-request GET /api/admin/roles 200
-request GET /api/admin/employees 200
-# Сохраняем роли сотрудника #5, чтобы в конце вернуть их без потери исходных прав.
-ORIGINAL_ROLES=$(jq -ce '.items[] | select(.id == 5) | .roles' "$RESPONSE")
-check_json 'any(.items[]; .id == 5 and .active)' 'Для демо нужен активный сотрудник #5'
-step ADMIN 'Для приёмки коллекции сотруднику #5 назначена дополнительная роль CURATOR'
-CURATOR_ROLES=$(jq -cn --argjson roles "$ORIGINAL_ROLES" '{roles:($roles + ["CURATOR"] | unique)}')
-request PUT /api/admin/employees/5/roles 200 "$CURATOR_ROLES"
-login CURATOR k.vasil@example.com
+section '2. Первая партия'
+login CURATOR i.berg@example.com
 step APPLICANT 'В справочнике нет нужного вида — депозитор добавляет его'
 SPECIES_NAME="Demo species $RUN_ID"
 request POST /api/depositors/me/species 201 "$(jq -cn --arg name "$SPECIES_NAME" '{latinName:$name,localName:"Демонстрационный вид",family:"Demoaceae"}')"
@@ -81,30 +73,19 @@ ACCESSION_CODE=$(jq -er '.boxes[0].samples[0].accessionCode' "$RESPONSE")
 step APPLICANT 'Депозитор скачивает этикетку Code 128 для первой коробки'
 request GET "/api/depositors/me/batches/$BATCH_ID/boxes/$BOX_ID/barcode" 200 '' "$TEMP_DIR/barcode.svg"
 
+
 next_part
-section '3. Куратор планирует приём, охрана оформляет проход'
+section '3. Приёмка и хранение'
 step CURATOR 'Куратор выбирает камеру со свободными местами'
 request GET /api/curator/chambers 200
 CHAMBER_ID=$(jq -er 'first(.[] | select(.freePlaceCount >= 3)) | .id' "$RESPONSE")
-step CURATOR 'Приём назначен на сегодня; вместе с планом выдан QR-пропуск'
+step CURATOR 'Куратор назначает приём на сегодня'
 request POST "/api/curator/batches/$BATCH_ID/intake-sessions" 201 "{\"chamberId\":$CHAMBER_ID,\"plannedDate\":\"$(date +%F)\"}"
 SESSION_ID=$(jq -er '.id' "$RESPONSE")
-INTAKE_PASS_ID=$(jq -er '.issuedPass.pass.id' "$RESPONSE")
-INTAKE_PASS_CODE=$(jq -er '.issuedPass.code' "$RESPONSE")
-jq -er '.issuedPass.qrSvg' "$RESPONSE" > "$TEMP_DIR/intake-pass.svg"
 check_json 'all(.boxes[]; .storagePlace == null)' 'Планирование преждевременно заняло места'
 step CURATOR 'Куратор отмечает отправку и прибытие партии по данным перевозчика'
 request PATCH "/api/curator/batches/$BATCH_ID/tracking-status" 200 '{"status":"IN_TRANSIT","trackingNumber":"DEMO-TRACK"}'
 request PATCH "/api/curator/batches/$BATCH_ID/tracking-status" 200 '{"status":"ARRIVED"}'
-login SECURITY p.petrova@example.com
-step SECURITY 'Охрана сканирует QR и регистрирует вход куратора в камеру'
-request POST /api/security/access-events 201 "{\"passCode\":\"$INTAKE_PASS_CODE\",\"chamberId\":$CHAMBER_ID,\"direction\":\"IN\",\"comment\":\"Приём демо-коллекции\"}"
-step SECURITY 'Для сопровождающего выдан отдельный гостевой пропуск'
-request POST /api/security/passes 201 "{\"validFrom\":\"$(date -u -d '1 minute ago' +%Y-%m-%dT%H:%M:%SZ)\",\"validTo\":\"$(date -u -d '1 hour' +%Y-%m-%dT%H:%M:%SZ)\",\"chamberIds\":[$CHAMBER_ID],\"comment\":\"Сопровождение коллекции\"}"
-GUEST_PASS_ID=$(jq -er '.pass.id' "$RESPONSE")
-
-next_part
-section '4. Досмотр, размещение и публикация образцов в каталоге'
 step CURATOR 'По штрихкоду куратор находит всю прибывшую партию'
 request GET "/api/curator/batches/by-barcode/$BARCODE" 200
 step CURATOR 'Куратор начинает досмотр — система резервирует места коробкам'
@@ -118,8 +99,6 @@ REPLACEMENT_PLACE_ID=$(jq -er '.[0].id' "$RESPONSE")
 request PATCH "/api/curator/boxes/$BOX_ID/storage-place" 200 "{\"storagePlaceId\":$REPLACEMENT_PLACE_ID}"
 step CURATOR 'Первая коробка размещена; у второй при досмотре обнаружено повреждение'
 request POST "/api/curator/boxes/$BOX_ID/place" 200
-step SECURITY 'Работа в камере закончена — охрана регистрирует выход куратора'
-request POST /api/security/access-events 201 "{\"passCode\":\"$INTAKE_PASS_CODE\",\"chamberId\":$CHAMBER_ID,\"direction\":\"OUT\"}"
 step CURATOR 'Куратор оформляет списание повреждённой коробки и закрывает приём'
 request POST "/api/curator/boxes/$SECOND_BOX_ID/write-off" 200 '{"reason":"При досмотре обнаружено повреждение упаковки"}'
 step CURATOR 'Обработка обеих коробок автоматически завершила приём'
@@ -138,45 +117,9 @@ request POST "/api/curator/boxes/$BOX_ID/place" 200
 step CURATOR 'На карте камеры видно новое расположение коробки'
 request GET "/api/curator/chambers/$CHAMBER_ID/places" 200
 check_json 'any(.places[]; .id == $place and .box.id == $box and .occupancy == "OCCUPIED")' 'Карта не показывает перемещение' --argjson place "$SECOND_PLACE_ID" --argjson box "$BOX_ID"
-step SECURITY 'Гостевой пропуск отозван; вход и выход куратора остались в журнале'
-request POST "/api/security/passes/$GUEST_PASS_ID/revoke" 200
-request GET "/api/security/access-events?passId=$INTAKE_PASS_ID&from=$(date -u -d '1 day ago' +%Y-%m-%dT%H:%M:%SZ)&to=$(date -u -d '1 day' +%Y-%m-%dT%H:%M:%SZ)" 200
 
 next_part
-section '5. Климат камеры: настройка, измерения и реакция инженера'
-login ENGINEER m.serg@example.com
-step ENGINEER 'Инженер открывает климат камеры, в которой хранится коллекция'
-request GET "/api/engineer/chambers/$CHAMBER_ID" 200
-CLIMATE_ORIGINAL_SETTINGS=$(jq -ce '{status,climateControlled,minTemperature,maxTemperature,minHumidity,maxHumidity}' "$RESPONSE")
-step ADMIN 'Администратор задаёт допустимые температуру и влажность'
-request PUT "/api/admin/chambers/$CHAMBER_ID/settings" 200 '{"status":"ACTIVE","climateControlled":true,"minTemperature":-20,"maxTemperature":-16,"minHumidity":20,"maxHumidity":30}'
-step ADMIN 'Администратор выдаёт ключ шлюзу этой камеры'
-request POST "/api/admin/chambers/$CHAMBER_ID/gateway-keys" 201 '{"name":"Шлюз демо-коллекции"}'
-GATEWAY_TOKEN=$(jq -er '.token' "$RESPONSE")
-GATEWAY_KEY_ID=$(jq -er '.key.id' "$RESPONSE")
-step GATEWAY 'Датчики сначала передают норму, затем превышение обоих порогов'
-GATEWAY_TIME=$(date -u -d '1 minute ago' +%s)
-request POST /api/gateway/readings 200 "{\"measuredAt\":\"$(date -u -d "@$GATEWAY_TIME" +%Y-%m-%dT%H:%M:%SZ)\",\"temperature\":-18,\"humidity\":25}"
-request POST /api/gateway/readings 200 "{\"measuredAt\":\"$(date -u -d "@$((GATEWAY_TIME + 1))" +%Y-%m-%dT%H:%M:%SZ)\",\"temperature\":-10,\"humidity\":45}"
-GATEWAY_BAD_ID=$(jq -er '.id' "$RESPONSE")
-step ENGINEER 'Нарушение появилось в истории и в личных уведомлениях инженера'
-CLIMATE_PERIOD="from=$(date -u -d '1 day ago' +%Y-%m-%dT%H:%M:%SZ)&to=$(date -u -d tomorrow +%Y-%m-%dT%H:%M:%SZ)"
-request GET "/api/engineer/chambers/$CHAMBER_ID/readings?$CLIMATE_PERIOD&size=5" 200
-request GET /api/notifications 200
-check_json 'any(.items[]; .readingId == $id)' 'Инженер не получил климатическое уведомление' --argjson id "$GATEWAY_BAD_ID"
-CLIMATE_NOTIFICATION_ID=$(jq -er --argjson id "$GATEWAY_BAD_ID" 'first(.items[] | select(.readingId == $id)) | .id' "$RESPONSE")
-request PATCH "/api/notifications/$CLIMATE_NOTIFICATION_ID/read" 200
-step ENGINEER 'Инженер скачивает историю показаний в CSV'
-request GET "/api/engineer/chambers/$CHAMBER_ID/readings.csv?$CLIMATE_PERIOD" 200 '' "$TEMP_DIR/climate.csv"
-head -n 3 "$TEMP_DIR/climate.csv"
-step ADMIN 'Шлюз отключён, прежние настройки восстановлены; история измерений сохранена'
-request DELETE "/api/admin/gateway-keys/$GATEWAY_KEY_ID" 204
-unset GATEWAY_TOKEN GATEWAY_KEY_ID
-request PUT "/api/admin/chambers/$CHAMBER_ID/settings" 200 "$CLIMATE_ORIGINAL_SETTINGS"
-unset CLIMATE_ORIGINAL_SETTINGS
-
-next_part
-section '6. Депозитор запрашивает коллекцию обратно'
+section '4. Согласование изъятия и выдача'
 step APPLICANT 'Депозитор подаёт заявку на изъятие размещённой коробки'
 WITHDRAWAL_JSON=$(jq -cn --argjson batch "$BATCH_ID" --argjson box "$BOX_ID" --arg date "$(date +%F)" '{batchId:$batch,boxIds:[$box],reason:"Восстановление коллекции",desiredDate:$date}')
 request POST /api/depositors/me/withdrawal-requests 201 "$WITHDRAWAL_JSON"
@@ -206,8 +149,9 @@ step PUBLIC 'Выданный образец больше не предлага�
 request GET "/api/samples?species=$SPECIES_QUERY&country=RU" 200
 check_json 'all(.[]; .accessionCode != $code)' 'Изъятый образец остался в каталоге' --arg code "$ACCESSION_CODE"
 
+
 next_part
-section '7. Участники видят итоги, администратор — аудит и отчёты'
+section '5. История и завершение'
 step APPLICANT 'В истории партии виден весь путь коллекции от создания до выдачи'
 request GET "/api/depositors/me/batches/$BATCH_ID/history?size=100" 200
 check_json 'any(.items[]; .action == "BOX_WITHDRAWN")' 'В истории отсутствует выдача'
@@ -215,46 +159,8 @@ step APPLICANT 'В личных уведомлениях остались реш
 request GET '/api/notifications?size=100' 200
 OWN_NOTIFICATION_ID=$(jq -er '.items[0].id' "$RESPONSE")
 request PATCH "/api/notifications/$OWN_NOTIFICATION_ID/read" 200
-step ADMIN 'Администратор видит тех же участников и действия в полном аудите'
-REPORT_FROM='2000-01-01T00:00:00Z'
-REPORT_TO=$(date -u -d tomorrow +%Y-%m-%dT%H:%M:%SZ)
-request GET "/api/admin/audit?batchId=$BATCH_ID&from=$REPORT_FROM&to=$REPORT_TO&size=100" 200
-step ADMIN 'Пять отчётов показывают результат: места, депозитор, перевозка, выдача и климат'
-request GET /api/admin/reports/occupancy 200
-request GET "/api/admin/reports/depositors?depositorId=$APPLICANT_ID" 200
-request GET "/api/admin/reports/shipments?batchId=$BATCH_ID&from=$REPORT_FROM&to=$REPORT_TO" 200
-request GET "/api/admin/reports/withdrawals?batchId=$BATCH_ID&from=$REPORT_FROM&to=$REPORT_TO" 200
-check_json '.total == 1 and .items[0].requestId == $id' 'Выдача отсутствует в отчёте' --argjson id "$WITHDRAWAL_ID"
-request GET "/api/admin/reports/climate-incidents?chamberId=$CHAMBER_ID&from=$REPORT_FROM&to=$REPORT_TO" 200
-check_json 'any(.items[]; .parameter == "BOTH")' 'Климатический инцидент отсутствует в отчёте'
-step ADMIN 'Отчёт об изъятиях можно выгрузить в CSV'
-request GET "/api/admin/reports/withdrawals.csv?batchId=$BATCH_ID&from=$REPORT_FROM&to=$REPORT_TO" 200 '' "$TEMP_DIR/withdrawals.csv"
-head -n 3 "$TEMP_DIR/withdrawals.csv"
-step APPLICANT 'Проверка границы ролей: депозитор не может читать административный аудит'
-request GET "/api/admin/audit?from=$REPORT_FROM&to=$REPORT_TO" 403
-
-next_part
-section '8. Завершение работы и управление доступом сотрудника'
-step ADMIN 'Приёмка закончена — администратор возвращает сотруднику исходные роли'
-request PUT /api/admin/employees/5/roles 200 "$(jq -cn --argjson roles "$ORIGINAL_ROLES" '{roles:$roles}')"
-unset ORIGINAL_ROLES
-step ADMIN 'Отключение учётной записи сотрудника отзывает его действующую сессию'
-STAFF_DISABLED=1
-request PATCH /api/admin/employees/5/status 200 '{"active":false}'
-step CURATOR 'В прежней сессии сотрудник больше не авторизован'
-request GET /api/auth/me 401
-step ADMIN 'Администратор вновь включает сотрудника; для работы потребуется новый вход'
-request PATCH /api/admin/employees/5/status 200 '{"active":true}'
-STAFF_DISABLED=0
-step APPLICANT 'Депозитор выходит из системы, его сессия закрыта'
+step APPLICANT 'Депозитор выходит, прежняя сессия больше не действует'
 request POST /api/auth/logout 204
 request GET /api/depositors/me 401
-unset APPLICANT_CSRF_TOKEN CURATOR_CSRF_TOKEN
-# Оставшиеся технические сессии закрываем без отдельных демонстрационных шагов.
-QUIET=1
-for actor in SECURITY ENGINEER ADMIN; do
-    role "$actor"
-    request POST /api/auth/logout 204
-    unset "${actor}_CSRF_TOKEN"
-done
-QUIET=0
+unset APPLICANT_CSRF_TOKEN
+echo "Сценарий депозитора завершён: $STEP шагов, партия $BATCH_ID, заявка $WITHDRAWAL_ID выдана."

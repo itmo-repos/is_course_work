@@ -13,6 +13,7 @@ def brief:
         | if has("issuedPass") and .issuedPass != null then .issuedPass.code="<QR скрыт>" else . end
     else . end);
 brief
+| if $scenario == "depositor" then walk(if type == "object" then del(.issuedPass) else . end) else . end
 | if type == "object" and has("places") and has("summary") then
     .places |= map(select(.box.id == $box or .box.id == $secondBox
         or .id == $firstPlace or .id == $secondPlace or .id == $replacementPlace))
