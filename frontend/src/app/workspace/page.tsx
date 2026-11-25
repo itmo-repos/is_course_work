@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { ApplicationStatus } from './application-status';
 import { PageHeader } from '@/components/page-header';
 import { useApp } from '@/components/providers';
 
@@ -29,6 +30,7 @@ export default function Workspace() {
         <dt>{t('Тип аккаунта', 'Account type')}</dt><dd>{user.type}</dd>
         <dt>{t('Роли', 'Roles')}</dt><dd>{user.roles.join(', ') || '—'}</dd>
       </dl>
+      {user.type === 'DEPOSITOR' && <ApplicationStatus key={user.id} />}
     </>
   );
 }

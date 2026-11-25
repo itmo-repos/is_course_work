@@ -11,23 +11,23 @@ test.beforeEach(async({page})=>{
  });
 });
 test('catalog shows empty state and switches language',async({page})=>{
- await page.goto('/catalog');await expect(page.getByRole('status')).toHaveText('Образцы не найдены');
+ await page.goto('/catalog');await expect(page.getByRole('status').filter({hasText:'Образцы не найдены'})).toBeVisible();
  await page.getByRole('button',{name:'Сменить язык'}).click();await expect(page.getByRole('heading',{name:'Sample catalog'})).toBeVisible();
- await expect(page.getByRole('status')).toHaveText('No samples found');
+ await expect(page.getByRole('status').filter({hasText:'No samples found'})).toBeVisible();
 });
 test('failed login preserves input',async({page})=>{
  await page.goto('/login');await page.getByLabel('Email').fill('unknown@example.org');
  await page.getByLabel('Пароль',{exact:true}).fill('wrong-password');
  await page.getByRole('button',{name:'Войти',exact:true}).click();
- await expect(page.getByRole('alert')).toHaveText('Неверный email или пароль');
+ await expect(page.getByRole('main').getByRole('alert')).toHaveText('Неверный email или пароль');
  await expect(page.getByLabel('Email')).toHaveValue('unknown@example.org');
  await expect(page.getByLabel('Пароль',{exact:true})).toHaveValue('wrong-password');
 });
 test('catalog failure preserves filters',async({page})=>{
- await page.goto('/catalog');await expect(page.getByRole('status')).toHaveText('Образцы не найдены');
+ await page.goto('/catalog');await expect(page.getByRole('status').filter({hasText:'Образцы не найдены'})).toBeVisible();
  await page.route('**/api/samples?**',route=>route.fulfill({status:500}));
  await page.getByLabel('Вид растения').fill('Triticum');await page.getByRole('button',{name:'Найти',exact:true}).click();
- await expect(page.getByRole('alert')).toContainText('Не удалось загрузить каталог');
+ await expect(page.getByRole('main').getByRole('alert')).toContainText('Не удалось загрузить каталог');
  await expect(page.getByLabel('Вид растения')).toHaveValue('Triticum');
 });
 test('employee ADMIN does not get curator navigation implicitly',async({page})=>{
