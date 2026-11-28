@@ -9,17 +9,7 @@ import { useApiData } from '@/lib/use-api-data';
 import { BatchForm } from './batch-form';
 import { BatchContents } from './batch-contents';
 
-const statusLabels: Record<Batch['status'], [string, string]> = {
-  FORMED: ['Сформирована', 'Created'],
-  CONFIRMED: ['Подтверждена', 'Confirmed'],
-  REJECTED: ['Отклонена', 'Rejected'],
-  IN_TRANSIT: ['В пути', 'In transit'],
-  ARRIVED: ['Прибыла', 'Arrived'],
-  INSPECTION: ['На досмотре', 'Under inspection'],
-  PLACED: ['Размещена', 'Stored'],
-  PARTIALLY_PLACED: ['Размещена частично', 'Partially stored'],
-  WRITTEN_OFF: ['Списана', 'Written off'],
-};
+import { BatchStatus } from './batch-status';
 
 function BatchEditor({ onSaved, initialBatch, onCancel }: {
   onSaved: (batch: Batch) => void;
@@ -74,9 +64,11 @@ function DepositorBatches() {
           : <BatchEditor key="new" onSaved={onSaved} />)
         : <p>{t('Создание партии доступно после подтверждения договора.', 'You can create batches after your agreement is verified.')}</p>}
 
-      <section>
-        <h2>{t('Список партий', 'Batch list')}</h2>
-        {!editingBatch && <button onClick={batches.reload}>{t('Обновить список', 'Refresh list')}</button>}
+      <section className="workspace-panel" id="batch-list">
+        <div className="workspace-section-heading">
+          <h2>{t('Список партий', 'Batch list')}</h2>
+          {!editingBatch && <button className="secondary" onClick={batches.reload}>{t('Обновить список', 'Refresh list')}</button>}
+        </div>
         {batches.failed ? <div role="alert">
           <p>{t('Не удалось загрузить партии.', 'Could not load batches.')}</p>
           <button onClick={batches.reload}>{t('Повторить', 'Retry')}</button>
@@ -89,7 +81,8 @@ function DepositorBatches() {
               <th>{t('Состав и действия', 'Contents and actions')}</th>
             </tr></thead>
             <tbody>{batches.data.map(batch => <tr key={batch.id}>
-              <td>{batch.number}</td><td>{t(...statusLabels[batch.status])}</td>
+              <td><Link className="batch-number" href={'/workspace/batches/' + batch.id}>{batch.number}</Link></td>
+              <td><BatchStatus status={batch.status} /></td>
               <td>{batch.desiredShipmentDate}</td><td>{batch.boxCount}</td>
               <td>
                 {batch.rejectionReason && <p>{t('Причина отклонения', 'Reason for rejection')} — {batch.rejectionReason}</p>}

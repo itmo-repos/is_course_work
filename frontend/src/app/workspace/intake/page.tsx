@@ -7,6 +7,7 @@ import { useApp } from '@/components/providers';
 import { api, ApiError } from '@/lib/api.mjs';
 import type { Batch } from '@/lib/types';
 import { useApiData } from '@/lib/use-api-data';
+import { Metrics } from '../metrics';
 import { BatchContents } from '../batches/batch-contents';
 
 function ReviewBatch({ batch, onDecision, reload }: {
@@ -46,7 +47,7 @@ function ReviewBatch({ batch, onDecision, reload }: {
         <label htmlFor={'batch-reason-' + batch.id}>{t('Причина отклонения', 'Reason for rejection')}</label>
         <input id={'batch-reason-' + batch.id} value={reason} onChange={event => setReason(event.target.value)}
           maxLength={2000} required disabled={disabled} />
-        <button disabled={disabled || !reason.trim()}>{t('Отклонить партию', 'Reject batch')}</button>
+        <button className="secondary" disabled={disabled || !reason.trim()}>{t('Отклонить партию', 'Reject batch')}</button>
       </form>
       {state === 'pending' && <p role="status">{t('Сохраняем решение…', 'Saving decision…')}</p>}
       {state === 'failed' && <p role="alert">{t('Не удалось сохранить решение. Повторите попытку.', 'Could not save the decision. Try again.')}</p>}
@@ -70,7 +71,15 @@ function ReviewQueue() {
 
   return (
     <section>
-      <h2>{t('Партии на согласовании', 'Batches awaiting review')}</h2>
+      {data && <Metrics items={[
+        { label: t('Партии к рассмотрению', 'Batches to review'), value: data.length },
+        { label: t('Коробок в очереди', 'Boxes in queue'), value: data.reduce((sum, batch) => sum + batch.boxCount, 0) },
+        { label: t('Паспортов образцов', 'Sample passports'), value: data.reduce((sum, batch) => sum + batch.boxes.reduce((n, box) => n + box.samples.length, 0), 0) },
+      ]} />}
+      <div className="workspace-section-heading">
+        <h2>{t('Партии на согласовании', 'Batches awaiting review')}</h2>
+        {data && <button className="secondary" onClick={reload}>{t('Обновить список', 'Refresh list')}</button>}
+      </div>
       {reviewed && <p role="status">{reviewed.number} — {reviewed.status === 'CONFIRMED'
         ? t('партия подтверждена', 'batch confirmed') : t('партия отклонена', 'batch rejected')}</p>}
       {failed ? <div role="alert">
@@ -78,7 +87,7 @@ function ReviewQueue() {
         <button onClick={reload}>{t('Повторить', 'Retry')}</button>
       </div> : !data ? <p role="status">{t('Загрузка партий…', 'Loading batches…')}</p>
         : data.length === 0 ? <p>{t('Партий на согласовании нет.', 'No batches are awaiting review.')}</p>
-        : <table>
+        : <table className="review-table">
           <thead><tr>
             <th>{t('Номер партии', 'Batch number')}</th>
             <th>{t('Желаемая дата отправки', 'Desired shipment date')}</th>

@@ -1,0 +1,434 @@
+.workspace-content {
+  color: var(--color-ink);
+  min-width: 0;
+  padding-bottom: 48px;
+}
+
+.workspace-content h2,
+.workspace-content h3,
+.workspace-content h4 {
+  color: var(--color-ink);
+  font-weight: 700;
+  line-height: 1.22;
+  letter-spacing: -.022em;
+}
+
+.workspace-content h2 {
+  font-size: 24px;
+  margin: 0 0 18px;
+}
+
+.workspace-content h3 {
+  font-size: 19px;
+  margin: 1.4em 0 .65em;
+}
+
+.workspace-content h4 {
+  font-size: 17px;
+  margin: 1.1em 0 .55em;
+}
+
+.workspace-content dl,
+.workspace-content dd {
+  margin: 0;
+}
+
+.workspace-content :is(input, select) {
+  max-width: 100%;
+  min-width: 0;
+}
+
+.workspace-content .form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 7px;
+  max-width: 34rem;
+}
+
+.workspace-content label,
+.workspace-content dt {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.workspace-content .form label:not(:first-child) {
+  margin-top: 8px;
+}
+
+.workspace-content .form button {
+  justify-self: start;
+  margin-top: 7px;
+}
+
+.workspace-content .secondary,
+.workspace-action.secondary,
+.workspace-content .batch-editor button[type="button"] {
+  border: 1px solid var(--color-border);
+  color: var(--color-primary);
+  background: var(--color-surface);
+}
+
+.workspace-content .secondary:enabled:hover,
+.workspace-action.secondary:hover,
+.workspace-content .batch-editor button[type="button"]:enabled:hover {
+  background: var(--color-panel);
+}
+
+.workspace-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  min-height: 43px;
+  padding: 9px 18px;
+  background: var(--color-primary);
+  color: var(--color-surface);
+  border: 1px solid transparent;
+  border-radius: 5px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.workspace-actions,
+.workspace-content .actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.workspace-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 16px;
+}
+
+.workspace-section-heading h2 {
+  margin: 0;
+}
+
+.workspace-section-heading > a,
+.workspace-crumb a {
+  color: var(--color-link);
+  font-weight: 600;
+}
+
+.workspace-section-heading > a {
+  text-decoration: none;
+}
+
+.workspace-section-heading > a:hover {
+  text-decoration: underline;
+}
+
+.workspace-section-heading button {
+  flex-shrink: 0;
+}
+
+.workspace-panel {
+  padding: 23px clamp(16px, 2vw, 28px);
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+  background: var(--color-surface);
+  margin: 20px 0 28px;
+  min-width: 0;
+  scroll-margin-top: 20px;
+}
+
+.workspace-empty,
+.workspace-crumb,
+.workspace-content .workspace-facts dt {
+  color: var(--color-muted);
+}
+
+.workspace-crumb {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 15px;
+  margin: 0 0 18px;
+}
+
+.workspace-empty {
+  padding: 17px 0;
+  border-bottom: 1px solid var(--color-line);
+}
+
+.workspace-content .workspace-metrics {
+  display: flex;
+  border-bottom: 1px solid var(--color-line);
+  padding: 14px 0 29px;
+  margin: 8px 0 28px;
+}
+
+.workspace-metrics > div {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 0 15px;
+}
+
+.workspace-metrics > div + div {
+  border-left: 1px solid var(--color-line);
+  padding-left: clamp(16px, 4vw, 70px);
+}
+
+.workspace-metrics dt {
+  font-size: 17px;
+  font-weight: 650;
+}
+
+.workspace-metrics dd {
+  font-size: 37px;
+  font-weight: 700;
+  line-height: 1.1;
+  margin-top: 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+.overview-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 45fr) minmax(0, 55fr);
+  border-bottom: 1px solid var(--color-line);
+  padding: 2px 0 34px;
+  margin-bottom: 28px;
+}
+
+.overview-columns > :first-child {
+  padding-right: clamp(16px, 2.5vw, 38px);
+}
+
+.overview-aside {
+  padding-left: clamp(16px, 2.5vw, 38px);
+  border-left: 1px solid var(--color-line);
+}
+
+.staff-overview {
+  margin-top: 30px;
+}
+
+.workspace-profile,
+.workspace-contract {
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+  padding: 20px 23px;
+  background: var(--color-panel);
+  min-width: 0;
+}
+
+.workspace-profile {
+  margin-bottom: 28px;
+}
+
+.workspace-profile h2,
+.workspace-contract h2 {
+  font-size: 19px;
+}
+
+.workspace-contract {
+  margin: 22px 0 16px;
+}
+
+.workspace-contract input[type='file'] {
+  width: 100%;
+  height: auto;
+}
+
+.workspace-content .workspace-facts {
+  display: grid;
+  gap: 15px 20px;
+  margin-bottom: 16px;
+}
+
+.workspace-facts dd {
+  font-weight: 600;
+  margin-top: 5px;
+  overflow-wrap: anywhere;
+}
+
+.workspace-profile .workspace-facts {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr));
+  margin: 0;
+}
+
+.application-summary > .workspace-facts {
+  margin-left: 0;
+  border-left: 2px solid var(--color-line);
+  padding-left: 18px;
+}
+
+.workspace-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--color-line);
+  margin: 20px 0;
+}
+
+.workspace-tabs a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  border-bottom: 2px solid transparent;
+  text-decoration: none;
+  padding: 7px 15px;
+  font-weight: 600;
+  color: var(--color-muted);
+}
+
+.workspace-tabs a:focus-visible,
+.workspace-tabs a:hover {
+  color: var(--color-link);
+  border-bottom-color: var(--color-link);
+}
+
+.workspace-count,
+.workspace-status {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  padding: 4px 9px;
+  border-radius: 5px;
+  font-size: 14px;
+  line-height: 1.24;
+  font-weight: 600;
+  color: var(--color-link);
+  background: var(--color-panel);
+}
+
+.workspace-count {
+  background: var(--color-hover);
+  color: var(--color-primary);
+}
+
+.workspace-status:is([data-status="ACTIVE"], [data-status="CONFIRMED"], [data-status="PLACED"]) {
+  color: var(--color-positive);
+  background: color-mix(in srgb, var(--color-positive) 10%, var(--color-surface));
+}
+
+.workspace-status:is([data-status="REJECTED"], [data-status="CONTRACT_REJECTED"], [data-status="WRITTEN_OFF"]) {
+  color: var(--color-danger);
+  background: color-mix(in srgb, var(--color-danger) 9%, var(--color-surface));
+}
+
+.workspace-content table {
+  width: 100%;
+  border: 0;
+  border-collapse: collapse;
+  margin-top: 10px;
+  font-size: 15px;
+}
+
+.workspace-content :is(th,td) {
+  padding: 12px 10px;
+  text-align: left;
+  border: 0;
+  border-bottom: 1px solid var(--color-line);
+  background: var(--color-surface);
+  overflow-wrap: anywhere;
+  vertical-align: middle;
+}
+
+.workspace-content th {
+  color: var(--color-primary);
+  font-size: 14px;
+}
+
+.workspace-content td .form,
+.workspace-content td .actions {
+  margin: 10px 0 0;
+}
+
+.workspace-content #applications td:last-child {
+  max-width: 245px;
+}
+
+.workspace-content #applications td .actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: start;
+}
+
+.workspace-content .batch-number {
+  color: inherit;
+  font-weight: 650;
+  text-underline-offset: 3px;
+}
+
+.workspace-content table table {
+  font-size: 14px;
+}
+
+.workspace-content table table th {
+  font-size: 13px;
+}
+
+.workspace-content details > summary {
+  cursor: pointer;
+  color: var(--color-link);
+  font-weight: 600;
+}
+
+.workspace-content details[open] > summary {
+  margin-bottom: 12px;
+}
+
+.workspace-content .batch-facts {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 138px), 1fr));
+  margin: 0;
+}
+
+.workspace-content #boxes {
+  margin-top: 30px;
+}
+
+.workspace-content #boxes section + section {
+  margin-top: 28px;
+}
+
+.workspace-content .batch-editor details {
+  padding: 12px 16px;
+  border-radius: 5px;
+  background: var(--color-panel);
+}
+
+.workspace-content .batch-editor fieldset {
+  min-width: 0;
+  margin: 18px 0;
+  border: 1px solid var(--color-line);
+  border-radius: 6px;
+  padding: 14px 18px 18px;
+}
+
+.workspace-content .batch-editor legend {
+  padding: 0 7px;
+  font-weight: 650;
+}
+
+.workspace-content .passport-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 185px), 1fr));
+  gap: 14px;
+  background: var(--color-panel);
+}
+
+.passport-field {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  min-width: 0;
+}
+
+.workspace-content .passport-field > :is(input,select) {
+  align-self: end;
+  width: 100%;
+}
+
+.workspace-content .batch-editor .actions {
+  margin-top: 20px;
+}
+
+.workspace-content [hidden] {
+  display: none !important;
+}

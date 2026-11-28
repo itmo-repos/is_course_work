@@ -12,7 +12,7 @@ test('an active depositor reviews, corrects and creates a batch with two boxes',
 
   await page.goto('/login');
   await page.getByLabel('Email').fill(email!);
-  await page.getByLabel('Пароль').fill(password!);
+  await page.getByLabel('Пароль', { exact: true }).fill(password!);
   await page.getByRole('button', { name: 'Войти', exact: true }).click();
   await expect(page).toHaveURL(/\/workspace$/);
   await page.getByRole('link', { name: 'Мои партии' }).click();

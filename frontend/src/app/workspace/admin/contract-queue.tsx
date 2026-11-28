@@ -52,7 +52,7 @@ function ContractRow({ application, onDecision, reload }: {
           </label>
           <input id={'contract-reason-' + application.id} value={reason} maxLength={2000} required
             disabled={disabled} onChange={event => setReason(event.target.value)} />
-          <button disabled={disabled || !reason.trim()}>
+          <button className="secondary" disabled={disabled || !reason.trim()}>
             {reviewing ? t('Отклонить скан', 'Reject scan') : t('Отклонить заявку окончательно', 'Reject application permanently')}
           </button>
         </form>
@@ -107,7 +107,7 @@ export function ContractQueue() {
   const { t } = useApp();
   const [status, setStatus] = useState<QueueStatus>('VERIFICATION');
   return (
-    <section>
+    <section className="workspace-panel" id="agreements">
       <h2>{t('Договоры хранения', 'Storage agreements')}</h2>
       <p>
         <label htmlFor="contract-queue-status">{t('Статус договора', 'Agreement status')} </label>

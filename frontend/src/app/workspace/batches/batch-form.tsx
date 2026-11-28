@@ -16,24 +16,34 @@ function PassportFields({ id, index, species, countries, year, initial }: {
 }) {
   const { t } = useApp();
   return (
-    <fieldset className="form">
+    <fieldset className="passport-fields">
       <legend>{t('Паспорт образца', 'Sample passport')} {index}</legend>
-      <label htmlFor={'species-' + id}>{t('Вид растения', 'Plant species')}</label>
-      <select id={'species-' + id} name={'species-' + id} defaultValue={initial?.speciesId ?? ''} required>
-        <option value="">{t('Выберите вид', 'Select a species')}</option>
-        {species.map(item => <option key={item.id} value={item.id}>{item.latinName} — {item.localName}</option>)}
-      </select>
-      <label htmlFor={'country-' + id}>{t('Страна происхождения', 'Country of origin')}</label>
-      <select id={'country-' + id} name={'country-' + id} defaultValue={initial?.originCountryCode ?? ''} required>
-        <option value="">{t('Выберите страну', 'Select a country')}</option>
-        {countries.map(country => <option key={country.code} value={country.code}>{country.name}</option>)}
-      </select>
-      <label htmlFor={'year-' + id}>{t('Год сбора', 'Collection year')}</label>
-      <input id={'year-' + id} name={'year-' + id} defaultValue={initial?.collectionYear} type="number" min={1850} max={year} step={1} required />
-      <label htmlFor={'quantity-' + id}>{t('Количество семян', 'Seed quantity')}</label>
-      <input id={'quantity-' + id} name={'quantity-' + id} defaultValue={initial?.seedQuantity} type="number" min={1} max={2147483647} step={1} required />
-      <label htmlFor={'note-' + id}>{t('Примечание (необязательно)', 'Note (optional)')}</label>
-      <input id={'note-' + id} name={'note-' + id} defaultValue={initial?.note ?? ''} maxLength={5000} />
+      <div className="passport-field">
+        <label htmlFor={'species-' + id}>{t('Вид растения', 'Plant species')}</label>
+        <select id={'species-' + id} name={'species-' + id} defaultValue={initial?.speciesId ?? ''} required>
+          <option value="">{t('Выберите вид', 'Select a species')}</option>
+          {species.map(item => <option key={item.id} value={item.id}>{item.latinName} — {item.localName}</option>)}
+        </select>
+      </div>
+      <div className="passport-field">
+        <label htmlFor={'country-' + id}>{t('Страна происхождения', 'Country of origin')}</label>
+        <select id={'country-' + id} name={'country-' + id} defaultValue={initial?.originCountryCode ?? ''} required>
+          <option value="">{t('Выберите страну', 'Select a country')}</option>
+          {countries.map(country => <option key={country.code} value={country.code}>{country.name}</option>)}
+        </select>
+      </div>
+      <div className="passport-field">
+        <label htmlFor={'year-' + id}>{t('Год сбора', 'Collection year')}</label>
+        <input id={'year-' + id} name={'year-' + id} defaultValue={initial?.collectionYear} type="number" min={1850} max={year} step={1} required />
+      </div>
+      <div className="passport-field">
+        <label htmlFor={'quantity-' + id}>{t('Количество семян', 'Seed quantity')}</label>
+        <input id={'quantity-' + id} name={'quantity-' + id} defaultValue={initial?.seedQuantity} type="number" min={1} max={2147483647} step={1} required />
+      </div>
+      <div className="passport-field">
+        <label htmlFor={'note-' + id}>{t('Примечание (необязательно)', 'Note (optional)')}</label>
+        <input id={'note-' + id} name={'note-' + id} defaultValue={initial?.note ?? ''} maxLength={5000} />
+      </div>
     </fieldset>
   );
 }
@@ -103,7 +113,7 @@ export function BatchForm({ countries, species, onSpeciesCreated, onSaved, initi
   }
 
   return (
-    <section>
+    <section className="workspace-panel batch-editor" id="batch-editor">
       <h2>{initialBatch ? t('Исправление партии', 'Edit batch') + ' ' + initialBatch.number : t('Новая партия', 'New batch')}</h2>
       {onCancel && <button disabled={state === 'pending'} onClick={onCancel}>
         {t('Отменить редактирование', 'Cancel editing')}

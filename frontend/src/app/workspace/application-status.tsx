@@ -18,23 +18,23 @@ export function ApplicationStatus() {
   const { t } = useApp();
   const { data, setData, failed, reload } = useApiData<DepositorApplication>('/depositors/me');
   return (
-    <section>
+    <section className="application-summary" id="application">
       <h2>{t('Моя заявка', 'My application')}</h2>
-      {data ? <dl>
-        <dt>{t('Организация', 'Organization')}</dt><dd>{data.legalName}</dd>
-        <dt>{t('Статус', 'Status')}</dt><dd>{t(...labels[data.status])}</dd>
-        {data.rejectionReason && <>
+      {data ? <dl className="workspace-facts">
+        <div><dt>{t('Организация', 'Organization')}</dt><dd>{data.legalName}</dd></div>
+        <div><dt>{t('Статус', 'Status')}</dt><dd><span className="workspace-status" data-status={data.status}>{t(...labels[data.status])}</span></dd></div>
+        {data.rejectionReason && <div>
           <dt>{t('Причина отказа', 'Reason for rejection')}</dt><dd>{data.rejectionReason}</dd>
-        </>}
+        </div>}
       </dl> : failed ? <p role="alert">{t('Не удалось загрузить заявку.', 'Could not load your application.')}</p>
         : <p role="status">{t('Загрузка…', 'Loading…')}</p>}
-      {data?.contract && <section>
+      {data?.contract && <section className="workspace-contract" id="contract">
         <h2>{t('Договор хранения', 'Storage agreement')}</h2>
         <p>{t('Номер договора', 'Agreement number')} {data.contract.number}</p>
         <p><a href="/api/depositors/me/contract">{t('Скачать шаблон договора (PDF)', 'Download agreement template (PDF)')}</a></p>
         {data.status === 'AWAITING_CONTRACT' && <ContractUpload onUploaded={setData} />}
       </section>}
-      {(data || failed) && <button onClick={reload}>{t('Обновить статус', 'Refresh status')}</button>}
+      {(data || failed) && <button className="secondary" onClick={reload}>{t('Обновить статус', 'Refresh status')}</button>}
     </section>
   );
 }

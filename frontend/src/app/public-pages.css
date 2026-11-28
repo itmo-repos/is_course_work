@@ -1,0 +1,683 @@
+.public-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.public-home, .vault-catalog, .vault-login {
+  background: var(--color-bg);
+  color: var(--color-ink);
+}
+
+.public-home h1, .vault-catalog h1, .vault-login h1, .vault-registration h1 {
+  color: var(--color-ink);
+  margin: 0;
+}
+
+.public-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .65em;
+  padding: .68em 1.2em;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: transparent;
+  color: var(--color-ink);
+  font: inherit;
+  font-weight: 500;
+  line-height: 1.3;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.public-button.primary {
+  background: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
+}
+
+.public-button:enabled:hover, a.public-button:hover {
+  filter: brightness(.91);
+}
+
+.public-button:disabled {
+  opacity: .55;
+  cursor: default;
+}
+
+.home-hero {
+  position: relative;
+  isolation: isolate;
+  min-height: clamp(500px, 40.95vw, 700px);
+  display: flow-root;
+}
+
+.hero-image {
+  position: absolute;
+  z-index: -1;
+  inset: 3.6% 0 0 auto;
+  width: 70.3%;
+  background: url('/images/seed-vault.png') center 63% / cover no-repeat;
+  mask-image: linear-gradient(to right, transparent, rgb(0 0 0 / 18%) 11%, rgb(0 0 0 / 62%) 23%, black 42%),
+  linear-gradient(to bottom, transparent, black 5%, black 91%, transparent);
+  mask-composite: intersect;
+}
+
+.hero-content {
+  position: relative;
+  width: 43%;
+  margin: clamp(48px, 5.5vw, 96px) 0 clamp(46px, 5vw, 92px) 5.53%;
+}
+
+.hero-content h1 {
+  font-size: clamp(40px, 3.85vw, 68px);
+  font-weight: 730;
+  line-height: 1.08;
+  letter-spacing: -.015em;
+}
+
+.hero-content p {
+  max-width: 23em;
+  margin: .9em 0 0;
+  color: var(--color-muted);
+  font-size: clamp(19px, 1.63vw, 28px);
+  line-height: 1.45;
+}
+
+.hero-actions {
+  display: flex;
+  gap: clamp(10px, 1.3vw, 24px);
+  margin-top: clamp(24px, 2.55vw, 44px);
+}
+
+.hero-actions .public-button {
+  min-height: 2.85em;
+  font-size: clamp(16px, 1.30vw, 22px);
+  white-space: nowrap;
+  padding-inline: 1.65em;
+}
+
+.hero-actions .public-button:not(.primary) {
+  border-color: var(--color-ink);
+}
+
+.home-features {
+  display: grid;
+  grid-template-columns: 1fr .97fr 1.1fr;
+  gap: 2%;
+  margin: 0 3.52% 0 5.53%;
+  padding-block: clamp(27px, 2.8vw, 48px);
+  border-block: 1px solid var(--color-line);
+}
+
+.home-feature {
+  display: flex;
+  gap: clamp(14px, 1.95vw, 34px);
+}
+
+.home-feature svg {
+  flex: none;
+  width: clamp(27px, 2.35vw, 40px);
+  height: 40px;
+  color: var(--color-primary);
+}
+
+.home-feature h2 {
+  margin: 0 0 .3em;
+  font-size: clamp(16px, 1.37vw, 23px);
+  font-weight: 650;
+  line-height: 1.3;
+  color: var(--color-ink);
+}
+
+.home-feature p {
+  max-width: 23em;
+  margin: 0;
+  font-size: clamp(15px, 1.17vw, 20px);
+  line-height: 1.5;
+  color: var(--color-muted);
+}
+
+.vault-catalog {
+  min-height: 75vh;
+  padding: clamp(26px, 2vw, 38px) 3% 54px 4.75%;
+}
+
+.vault-catalog h1 {
+  font-size: clamp(36px, 3.12vw, 51px);
+  font-weight: 720;
+  letter-spacing: -.015em;
+  line-height: 1.12;
+}
+
+.catalog-subtitle {
+  margin: .45em 0 0;
+  color: var(--color-muted);
+  font-size: clamp(18px, 1.37vw, 22px);
+}
+
+.catalog-searchbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  margin-top: 28px;
+}
+
+.catalog-search {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 73%;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  height: 47px;
+  background: #fff8;
+  padding-inline: 15px;
+  color: var(--color-muted);
+}
+
+.catalog-search:focus-within, .login-field:focus-within {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+.catalog-search input {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  font: inherit;
+  color: var(--color-ink);
+}
+
+.catalog-search input:focus-visible, .login-field input:focus-visible {
+  outline: 0;
+}
+
+.catalog-searchbar p {
+  color: var(--color-muted);
+  margin: 0;
+}
+
+.catalog-layout {
+  display: grid;
+  grid-template-columns: minmax(195px, 20%) minmax(0, 1fr);
+  gap: 2%;
+  margin: 33px 0 0 -.85vw;
+}
+
+.catalog-sidebar {
+  padding: 16px clamp(14px, 1.77vw, 30px) 22px 0;
+  border-right: 1px solid var(--color-line);
+  align-self: start;
+}
+
+.catalog-sidebar label {
+  display: block;
+  font-weight: 650;
+  font-size: 18px;
+  margin-bottom: 16px;
+}
+
+.catalog-sidebar select {
+  width: 100%;
+  padding: 11px 13px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: #fff8;
+  color: var(--color-ink);
+  font: inherit;
+}
+
+.catalog-filter-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 25px;
+}
+
+.catalog-filter-actions .public-button:not(.primary) {
+  background: var(--color-hover);
+  border-color: var(--color-hover);
+}
+
+.catalog-results {
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.catalog-results > p[role=status] {
+  margin-top: 17px;
+  color: var(--color-muted);
+}
+
+.catalog-results table {
+  width: 100%;
+  border-collapse: collapse;
+  background: transparent;
+  font-size: clamp(14px, 1.15vw, 18px);
+}
+
+.catalog-results th, .catalog-results td {
+  border: 0;
+  border-bottom: 1px solid var(--color-line);
+  padding: .75em .65em;
+  text-align: left;
+  background: transparent;
+  color: var(--color-ink);
+}
+
+.catalog-results th {
+  height: 51px;
+  font-size: .92em;
+  font-weight: 650;
+}
+
+.catalog-results td {
+  height: 59px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.catalog-results td:first-child {
+  white-space: nowrap;
+}
+
+.catalog-results tbody tr:hover {
+  background: var(--color-hover);
+}
+
+.catalog-pages {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 7px;
+  margin: 42px 0 0;
+}
+
+.catalog-pages button {
+  min-width: 34px;
+  min-height: 34px;
+  border: 0;
+  border-radius: 6px;
+  padding: 4px;
+  background: transparent;
+  color: var(--color-muted);
+}
+
+.catalog-pages button[aria-current=page] {
+  background: var(--color-primary);
+  color: white;
+}
+
+.vault-login {
+  display: grid;
+  grid-template-columns: 39.13% 1fr;
+  min-height: 100vh;
+}
+
+.login-image {
+  position: relative;
+  background: url('/images/seed-vault.png') 70% center / cover no-repeat;
+  transform: scaleX(-1);
+  filter: saturate(.8);
+}
+
+.login-image::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, rgb(245 246 247 / 25%), transparent 76%);
+}
+
+.login-content {
+  width: 65.5%;
+  margin: 0 auto;
+  padding-block: clamp(32px, 4.95vw, 85px) 56px;
+}
+
+.auth-masthead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.auth-wordmark {
+  color: var(--color-ink);
+  text-decoration: none;
+  font-weight: 750;
+  font-size: 26px;
+  letter-spacing: .11em;
+}
+
+.auth-language {
+  background: transparent;
+  color: var(--color-muted);
+  padding: 5px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: 5px;
+  font-size: 14px;
+}
+
+.login-content h1 {
+  font-size: clamp(38px, 3.52vw, 59px);
+  line-height: 1.15;
+  font-weight: 730;
+  letter-spacing: -.02em;
+  margin-top: clamp(55px, 8.65vw, 150px);
+}
+
+.login-intro {
+  color: var(--color-muted);
+  font-size: clamp(19px, 1.63vw, 27px);
+  line-height: 1.47;
+  margin: .8em 0 0;
+}
+
+.login-form {
+  display: grid;
+  margin-top: clamp(28px, 2.8vw, 48px);
+  font-size: clamp(17px, 1.37vw, 23px);
+}
+
+.login-form > label {
+  font-weight: 600;
+}
+
+.login-field {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding-inline: 18px;
+  min-height: clamp(46px, 3.9vw, 66px);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  margin-top: 10px;
+  color: var(--color-primary);
+}
+
+.login-field + label {
+  margin-top: clamp(20px, 2.35vw, 39px);
+}
+
+.login-field input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--color-ink);
+  font: inherit;
+}
+
+.login-field svg {
+  width: 25px;
+  height: 25px;
+  flex: none;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.65;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.login-field .password-eye {
+  display: grid;
+  place-items: center;
+  padding: 4px;
+  border: 0;
+  background: transparent;
+  color: var(--color-muted);
+}
+
+.login-form .public-button {
+  width: 100%;
+  margin-top: clamp(26px, 2.73vw, 46px);
+  min-height: 2.9em;
+}
+
+.login-footer {
+  display: flex;
+  align-items: center;
+  gap: 1.35em;
+  margin-top: clamp(28px, 3.1vw, 54px);
+  font-size: clamp(15px, 1.24vw, 21px);
+}
+
+.login-footer a, .registration-footer a {
+  text-decoration: none;
+  font-weight: 550;
+  color: var(--color-link);
+}
+
+.login-footer a:hover, .registration-footer a:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.login-footer > span {
+  flex: 1;
+  height: 1px;
+  background: var(--color-border);
+}
+
+.vault-registration {
+  display: grid;
+  grid-template-columns: 26% minmax(0, 1fr);
+  align-items: start;
+  min-height: 100vh;
+  background: var(--color-surface);
+  color: var(--color-ink);
+}
+
+.registration-sidebar {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  padding: 37px 6% 4vh 13%;
+  background: var(--color-sidebar);
+}
+
+.registration-sidebar .auth-wordmark {
+  font-size: 23px;
+  margin-left: 5%;
+  align-self: start;
+}
+
+.registration-sidebar h2 {
+  font-size: clamp(26px, 2.15vw, 36px);
+  line-height: 1.24;
+  margin: clamp(55px, 7vw, 116px) 5% 0;
+  color: var(--color-ink);
+}
+
+.registration-sidebar > p {
+  font-size: clamp(16px, 1.24vw, 21px);
+  line-height: 1.5;
+  margin: 13px 5% 0;
+  color: var(--color-muted);
+}
+
+.registration-steps {
+  padding: 0;
+  margin: 34px 0;
+  list-style: none;
+}
+
+.registration-steps li {
+  position: relative;
+}
+
+.registration-steps li + li {
+  margin-top: 18px;
+}
+
+.registration-steps li:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  height: 23px;
+  width: 1px;
+  left: 33px;
+  top: calc(50% + 20px);
+  background: var(--color-border);
+}
+
+.registration-steps a {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border-radius: 8px;
+  padding: 9px 15px;
+  font-size: clamp(15px, 1.24vw, 21px);
+  font-weight: 500;
+  color: var(--color-muted);
+  text-decoration: none;
+}
+
+.registration-steps a[aria-current=step] {
+  background: var(--color-subtle);
+  color: var(--color-primary);
+  font-weight: 650;
+}
+
+.registration-steps a span {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--color-muted);
+  border-radius: 50%;
+  color: var(--color-primary);
+}
+
+.registration-steps a[aria-current=step] span {
+  background: var(--color-primary);
+  color: var(--color-surface);
+  border-color: var(--color-primary);
+}
+
+.registration-note {
+  display: flex;
+  align-items: start;
+  gap: 12px;
+  padding: 15px;
+  margin-top: auto;
+  background: color-mix(in srgb, var(--color-subtle) 54%, var(--color-surface));
+  border: 1px solid var(--color-subtle);
+  border-radius: 8px;
+  color: var(--color-primary);
+}
+
+.registration-note p {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.registration-content {
+  padding: clamp(75px, 8.33vw, 132px) 4.8% 50px;
+  position: relative;
+}
+
+.registration-content > .auth-language {
+  position: absolute;
+  top: 32px;
+  right: 5%;
+}
+
+.registration-form section {
+  scroll-margin-top: 28px;
+}
+
+.registration-form section + section {
+  border-top: 1px solid var(--color-line);
+  padding-top: 34px;
+  margin-top: 44px;
+}
+
+.registration-content h1 {
+  font-size: clamp(30px, 2.47vw, 42px);
+  font-weight: 710;
+  line-height: 1.18;
+  letter-spacing: -.025em;
+}
+
+.registration-content h2 {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: 28px;
+}
+
+.registration-subtitle, .registration-success p {
+  color: var(--color-muted);
+  font-size: clamp(17px, 1.50vw, 25px);
+  margin: 11px 0 0;
+}
+
+.registration-success .public-button {
+  margin-top: 24px;
+}
+
+.registration-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 28px 4%;
+  margin-top: 32px;
+}
+
+.registration-grid .full {
+  grid-column: 1 / -1;
+}
+
+.registration-grid label {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  font-size: clamp(16px, 1.25vw, 21px);
+  font-weight: 600;
+}
+
+.registration-grid input, .registration-grid select {
+  width: 100%;
+  height: clamp(45px, 3.58vw, 58px);
+  padding: 0 .85em;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-ink);
+  font: inherit;
+  font-weight: 450;
+}
+
+.registration-grid > div input {
+  margin-block: 10px 4px;
+}
+
+.registration-grid small {
+  color: var(--color-muted);
+}
+
+.registration-footer {
+  display: flex;
+  align-items: center;
+  justify-content: end;
+  gap: 36px;
+  border-top: 1px solid var(--color-line);
+  margin-top: 40px;
+  padding-top: 28px;
+}

@@ -50,7 +50,7 @@ function ApplicationRow({ application, onDecision, reload }: {
           <label htmlFor={'reason-' + application.id}>{t('Причина отказа', 'Reason for rejection')}</label>
           <input id={'reason-' + application.id} value={reason} maxLength={2000} disabled={disabled}
             onChange={event => setReason(event.target.value)} />
-          <button disabled={disabled || !reason.trim()} onClick={() => decide('reject')}>{t('Отклонить', 'Reject')}</button>
+          <button className="secondary" disabled={disabled || !reason.trim()} onClick={() => decide('reject')}>{t('Отклонить', 'Reject')}</button>
         </div>
         {state === 'failed' && <p role="alert">{t('Не удалось сохранить решение. Повторите попытку.', 'Could not save the decision. Please try again.')}</p>}
         {state === 'stale' && <div role="alert">
@@ -73,7 +73,11 @@ function ApplicationQueue() {
   }
 
   return (
-    <>
+    <section className="workspace-panel" id="applications">
+      <div className="workspace-section-heading">
+        <h2>{t('Заявки депозиторов', 'Depositor applications')}</h2>
+        {data && <span className="workspace-count">{data.length}</span>}
+      </div>
       {notice && <p role="status">{notice.name} — {notice.decision === 'approve'
         ? t('заявка одобрена.', 'application approved.') : t('заявка отклонена.', 'application rejected.')}</p>}
       {failed ? <div role="alert">
@@ -90,7 +94,7 @@ function ApplicationQueue() {
           </tr></thead>
           <tbody>{data.map(application => <ApplicationRow key={application.id} application={application} onDecision={onDecision} reload={reload} />)}</tbody>
         </table>}
-    </>
+    </section>
   );
 }
 
@@ -98,10 +102,16 @@ export default function Admin() {
   const { t, user, authLoading } = useApp();
   return (
     <>
-      <PageHeader title={t('Заявки депозиторов', 'Depositor applications')} />
+      <PageHeader title={t('Администрирование', 'Administration')} />
       {authLoading ? <p role="status">{t('Загрузка…', 'Loading…')}</p>
         : !user ? <Link href="/login">{t('Войти в систему', 'Sign in')}</Link>
-        : user.roles.includes('ADMIN') ? <div key={user.id}><ApplicationQueue /><ContractQueue /></div>
+        : user.roles.includes('ADMIN') ? <div key={user.id}>
+          <div className="workspace-tabs">
+            <a href="#applications">{t('Регистрация организаций', 'Organization registration')}</a>
+            <a href="#agreements">{t('Проверка договоров', 'Agreement review')}</a>
+          </div>
+          <ApplicationQueue /><ContractQueue />
+        </div>
         : <p>{t('Раздел доступен только администратору.', 'Only administrators can access this section.')}</p>}
     </>
   );

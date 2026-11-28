@@ -11,7 +11,7 @@ test.skip(!adminEmail || !adminPassword, 'Requires a test backend and test admin
 async function signIn(page: Page, email: string, password: string) {
   await page.goto('/login');
   await page.getByLabel('Email').fill(email);
-  await page.getByLabel('Пароль').fill(password);
+  await page.getByLabel('Пароль', { exact: true }).fill(password);
   await page.getByRole('button', { name: 'Войти', exact: true }).click();
   await expect(page).toHaveURL(/\/workspace$/);
 }
@@ -96,7 +96,7 @@ for (const decision of ['approve', 'reject', 'return and verify contract', 'reje
     await page.getByLabel('Юридический адрес').fill('Test address');
     await page.getByLabel('Контактное лицо').fill('Test contact');
     await page.getByLabel('Email').fill(email);
-    await page.getByLabel('Пароль').fill(password);
+    await page.getByLabel('Пароль', { exact: true }).fill(password);
     await page.getByRole('button', { name: 'Отправить заявку' }).click();
     await expect(page.getByText('Заявка отправлена.', { exact: true })).toBeVisible();
     await signIn(page, email, password);
@@ -137,7 +137,7 @@ for (const decision of ['approve', 'reject', 'return and verify contract', 'reje
         await expect(page.getByRole('heading', { name: 'Нужен вход' })).toBeVisible();
         await page.goto('/login');
         await page.getByLabel('Email').fill(email);
-        await page.getByLabel('Пароль').fill(password);
+        await page.getByLabel('Пароль', { exact: true }).fill(password);
         await page.getByRole('button', { name: 'Войти', exact: true }).click();
         await expect(page.getByRole('main').getByRole('alert')).toHaveText('Неверный email или пароль');
       }
