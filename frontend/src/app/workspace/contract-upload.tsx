@@ -5,7 +5,10 @@ import type { DepositorApplication } from '@/lib/types';
 
 const maxScanBytes = 15 * 1024 * 1024;
 
-export function ContractUpload({ onUploaded }: { onUploaded: (application: DepositorApplication) => void }) {
+export function ContractUpload({ onUploaded, resubmitting }: {
+  onUploaded: (application: DepositorApplication) => void;
+  resubmitting: boolean;
+}) {
   const { t } = useApp();
   const [state, setState] = useState<'idle' | 'pending' | 'size' | 'invalid' | 'stale' | 'failed'>('idle');
 
@@ -45,7 +48,8 @@ export function ContractUpload({ onUploaded }: { onUploaded: (application: Depos
       {state === 'stale' && <p role="alert">{t('Статус договора изменился. Обновите статус.', 'The contract status has changed. Refresh the status.')}</p>}
       {state === 'failed' && <p role="alert">{t('Не удалось загрузить скан. Повторите попытку.', 'Could not upload the scan. Try again.')}</p>}
       <button disabled={state === 'pending' || state === 'stale'}>
-        {state === 'pending' ? t('Загрузка…', 'Uploading…') : t('Отправить скан', 'Submit scan')}
+        {state === 'pending' ? t('Загрузка…', 'Uploading…')
+          : resubmitting ? t('Отправить исправленный скан', 'Submit corrected scan') : t('Отправить скан', 'Submit scan')}
       </button>
     </form>
   );

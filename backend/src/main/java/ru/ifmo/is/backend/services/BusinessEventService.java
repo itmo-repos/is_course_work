@@ -18,7 +18,8 @@ public class BusinessEventService {
     public void depositor(AuthPrincipal actor, Depositor depositor, String action, String message) {
         if (depositor.getRejectionReason() != null) message += ": " + depositor.getRejectionReason();
         AuditEvent event = audit.record(actor, action, "DEPOSITOR", depositor.getId(), null, message);
-        if (action.equals("APPLICATION_SUBMITTED") || action.equals("CONTRACT_SCAN_UPLOADED")) {
+        if (action.equals("APPLICATION_SUBMITTED") || action.equals("APPLICATION_RESUBMITTED")
+                || action.equals("CONTRACT_SCAN_UPLOADED")) {
             notifications.role(RoleCode.ADMIN, event, NotificationType.CONTRACT);
         } else {
             notifications.depositor(depositor, event, NotificationType.CONTRACT);

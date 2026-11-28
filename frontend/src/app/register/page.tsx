@@ -86,10 +86,16 @@ function ApplicationForm({ selectSection, onSuccess }: { selectSection: (section
           <div>
             <label htmlFor="password">{t('Пароль', 'Password')}</label>
             <input id="password" name="password" type="password" autoComplete="new-password" minLength={8} maxLength={128} aria-describedby="password-hint" required />
-            <small id="password-hint">{t('От 8 до 128 символов.', '8 to 128 characters.')}</small>
+            <small id="password-hint">{t(
+              'От 8 до 128 символов. При повторной подаче используйте прежние email и пароль.',
+              '8 to 128 characters. To resubmit, use your original email and password.',
+            )}</small>
           </div>
         </div>
-        {state === 'conflict' && <p role="alert">{t('Email, название организации или регистрационные данные уже используются.', 'The email, organization name or registration details are already in use.')}</p>}
+        {state === 'conflict' && <p role="alert">{t(
+          'Email или реквизиты уже используются. Если заявку отклонили, проверьте прежние email и пароль.',
+          'The email or organization details are already in use. If your application was rejected, check your original email and password.',
+        )}</p>}
         {state === 'invalid' && <p role="alert">{t('Проверьте введённые данные.', 'Check your application details.')}</p>}
         {state === 'failed' && <p role="alert">{t('Не удалось отправить заявку. Повторите попытку.', 'Could not submit the application. Please try again.')}</p>}
         <div className="registration-footer">

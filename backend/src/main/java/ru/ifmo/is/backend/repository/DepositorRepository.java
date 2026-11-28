@@ -13,8 +13,12 @@ import java.util.Optional;
 
 public interface DepositorRepository extends JpaRepository<Depositor, Long> {
     Optional<Depositor> findByContactEmailIgnoreCase(String contactEmail);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    Optional<Depositor> findForUpdateByContactEmailIgnoreCase(String contactEmail);
+
     Optional<Depositor> findByLegalNameIgnoreCase(String legalName);
-    boolean existsByCountry_CodeAndRegistrationNumber(String countryCode, String registrationNumber);
+    Optional<Depositor> findByCountry_CodeAndRegistrationNumber(String countryCode, String registrationNumber);
     List<Depositor> findAllByStatusOrderByCreatedAtAsc(DepositorStatus status);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)

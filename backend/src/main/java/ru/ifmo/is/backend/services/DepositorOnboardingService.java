@@ -1,11 +1,15 @@
 package ru.ifmo.is.backend.services;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 import ru.ifmo.is.backend.dto.common.StoredDocument;
@@ -35,6 +39,7 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class DepositorOnboardingService {
     private final BusinessEventService events;
     private static final long MAX_SCAN_BYTES = 15L * 1024 * 1024;
@@ -56,31 +61,49 @@ public class DepositorOnboardingService {
         String countryCode = data.countryCode().strip().toUpperCase(Locale.ROOT);
         String registrationNumber = data.registrationNumber().strip();
 
-        if (depositorRepository.findByContactEmailIgnoreCase(email).isPresent()
-                || employeeRepository.findByEmailIgnoreCase(email).isPresent()) {
+        if (employeeRepository.findByEmailIgnoreCase(email).isPresent()) {
             throw conflict("Аккаунт с таким email уже существует");
         }
-        if (depositorRepository.findByLegalNameIgnoreCase(legalName).isPresent()) {
+
+        Depositor depositor = depositorRepository.findForUpdateByContactEmailIgnoreCase(email)
+                .orElseGet(Depositor::new);
+        Long existingId = depositor.getId();
+        boolean resubmitted = existingId != null;
+        if (resubmitted && (depositor.getStatus() != DepositorStatus.REJECTED
+                || !passwordEncoder.matches(data.password(), depositor.getPasswordHash()))) {
+            throw conflict("Аккаунт с таким email уже существует");
+        }
+        if (depositorRepository.findByLegalNameIgnoreCase(legalName)
+                .filter(other -> !other.getId().equals(existingId)).isPresent()) {
             throw conflict("Депозитор с таким названием организации уже существует");
         }
-        if (depositorRepository.existsByCountry_CodeAndRegistrationNumber(countryCode, registrationNumber)) {
+        if (depositorRepository.findByCountry_CodeAndRegistrationNumber(countryCode, registrationNumber)
+                .filter(other -> !other.getId().equals(existingId)).isPresent()) {
             throw conflict("Депозитор с такими реквизитами уже зарегистрирован");
         }
 
         Country country = countryRepository.findById(countryCode)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Неизвестный код страны"));
-        Depositor depositor = new Depositor();
         depositor.setLegalName(legalName);
         depositor.setCountry(country);
         depositor.setRegistrationNumber(registrationNumber);
         depositor.setLegalAddress(data.legalAddress().strip());
         depositor.setContactPerson(data.contactPerson().strip());
-        depositor.setContactEmail(email);
         depositor.setContactPhone(blankToNull(data.contactPhone()));
-        depositor.setPasswordHash(passwordEncoder.encode(data.password()));
+        if (!resubmitted) {
+            depositor.setContactEmail(email);
+            depositor.setPasswordHash(passwordEncoder.encode(data.password()));
+        }
         depositor.setStatus(DepositorStatus.NEW_REQUEST);
-        depositorRepository.save(depositor);
-        events.depositor(null, depositor, "APPLICATION_SUBMITTED", "Подана заявка депозитора #" + depositor.getId());
+        depositor.setRejectionReason(null);
+        try {
+            depositorRepository.saveAndFlush(depositor);
+        } catch (DataIntegrityViolationException exception) {
+            throw conflict("Email, название организации или регистрационные данные уже используются");
+        }
+        String action = resubmitted ? "APPLICATION_RESUBMITTED" : "APPLICATION_SUBMITTED";
+        String description = resubmitted ? "Повторно подана заявка депозитора #" : "Подана заявка депозитора #";
+        events.depositor(null, depositor, action, description + depositor.getId());
         return view(depositor);
     }
 
@@ -92,6 +115,9 @@ public class DepositorOnboardingService {
     @Transactional(readOnly = true)
     public StoredDocument getOwnContract(AuthPrincipal principal) {
         Depositor depositor = depositorAccess.current(principal);
+        if (depositor.getStatus() == DepositorStatus.NEW_REQUEST) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Договор ещё не сформирован");
+        }
         latestContract(depositor.getId());
         return new StoredDocument(contractDocumentService.readTemplate(), "contract.pdf", "application/pdf");
     }
@@ -99,22 +125,28 @@ public class DepositorOnboardingService {
     @Transactional
     public DepositorView uploadSignedContract(AuthPrincipal principal, MultipartFile upload) {
         Depositor depositor = depositorAccess.lockCurrent(principal);
-        requireStatus(depositor, DepositorStatus.AWAITING_CONTRACT);
+        boolean retry = depositor.getStatus() == DepositorStatus.CONTRACT_REJECTED;
+        if (!retry) requireStatus(depositor, DepositorStatus.AWAITING_CONTRACT);
+
         Contract contract = latestContract(depositor.getId());
-        if (contract.getStatus() != ContractStatus.GENERATED) {
+        ContractStatus expectedStatus = retry ? ContractStatus.REJECTED : ContractStatus.GENERATED;
+        if (contract.getStatus() != expectedStatus) {
             throw conflict("Договор сейчас не ожидает загрузки подписанного скана");
         }
         UploadedFile file = validateScan(upload);
         String relativePath = "signed/" + contract.getNumber() + "-" + UUID.randomUUID() + "." + file.extension();
         fileStorageService.store(relativePath, file.content());
+        cleanUpScansAfterTransaction(relativePath, contract.getSignedScanUri());
 
         contract.setSignedScanUri(relativePath);
         contract.setSignedUploadedAt(OffsetDateTime.now());
         contract.setStatus(ContractStatus.SCAN_UPLOADED);
+        contract.setRejectionReason(null);
         contract.setUpdatedAt(OffsetDateTime.now());
         depositor.setStatus(DepositorStatus.VERIFICATION);
         depositor.setRejectionReason(null);
-        events.depositor(principal, depositor, "CONTRACT_SCAN_UPLOADED", "Скан договора загружен на проверку");
+        events.depositor(principal, depositor, "CONTRACT_SCAN_UPLOADED", retry
+                ? "Исправленный скан договора загружен на проверку" : "Скан договора загружен на проверку");
         return view(depositorRepository.save(depositor));
     }
 
@@ -146,8 +178,10 @@ public class DepositorOnboardingService {
         Depositor depositor = lockDepositor(depositorId);
         requireStatus(depositor, DepositorStatus.NEW_REQUEST);
 
-        Contract contract = contractRepository.findFirstByDepositor_IdOrderByGeneratedAtDesc(depositorId)
-                .orElseGet(() -> newContract(depositor));
+        // Keep the rejected agreement and scan as part of the previous submission.
+        Contract previous = contractRepository.findFirstByDepositor_IdOrderByGeneratedAtDesc(depositorId).orElse(null);
+        Contract contract = previous == null || previous.getStatus() == ContractStatus.REJECTED
+                ? newContract(depositor, previous) : previous;
         contract.setStatus(ContractStatus.GENERATED);
         contract.setRejectionReason(null);
         contract.setVerifiedBy(null);
@@ -217,7 +251,7 @@ public class DepositorOnboardingService {
         Depositor depositor = lockDepositor(depositorId);
         requireStatus(depositor, DepositorStatus.CONTRACT_REJECTED);
         Contract contract = latestContract(depositorId);
-        fileStorageService.delete(contract.getSignedScanUri());
+        cleanUpScansAfterTransaction(null, contract.getSignedScanUri());
         contract.setSignedScanUri(null);
         contract.setSignedUploadedAt(null);
         contract.setStatus(ContractStatus.GENERATED);
@@ -241,10 +275,30 @@ public class DepositorOnboardingService {
         return view(depositorRepository.save(depositor));
     }
 
-    private Contract newContract(Depositor depositor) {
+    private void cleanUpScansAfterTransaction(String uploadedScan, String previousScan) {
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCompletion(int status) {
+                String obsoleteScan = switch (status) {
+                    case STATUS_COMMITTED -> previousScan;
+                    case STATUS_ROLLED_BACK -> uploadedScan;
+                    default -> null;
+                };
+                if (obsoleteScan == null) return;
+                try {
+                    fileStorageService.delete(obsoleteScan);
+                } catch (RuntimeException exception) {
+                    log.warn("Не удалось удалить неиспользуемый скан {}", obsoleteScan, exception);
+                }
+            }
+        });
+    }
+
+    private Contract newContract(Depositor depositor, Contract previous) {
         Contract contract = new Contract();
         contract.setDepositor(depositor);
-        contract.setNumber("CNTR-" + LocalDate.now().getYear() + "-" + String.format("%06d", depositor.getId()));
+        String prefix = "CNTR-" + LocalDate.now().getYear() + "-";
+        contract.setNumber(prefix + (previous == null ? String.format("%06d", depositor.getId()) : "R" + previous.getId()));
         contract.setStatus(ContractStatus.GENERATED);
         contract.setGeneratedAt(OffsetDateTime.now());
         contract.setUpdatedAt(OffsetDateTime.now());
@@ -262,8 +316,8 @@ public class DepositorOnboardingService {
     }
 
     private DepositorView view(Depositor depositor) {
-        Contract contract = contractRepository.findFirstByDepositor_IdOrderByGeneratedAtDesc(depositor.getId())
-                .orElse(null);
+        Contract contract = depositor.getStatus() == DepositorStatus.NEW_REQUEST ? null
+                : contractRepository.findFirstByDepositor_IdOrderByGeneratedAtDesc(depositor.getId()).orElse(null);
         return new DepositorView(depositor.getId(), depositor.getLegalName(), depositor.getCountry().getCode(),
                 depositor.getCountry().getName(), depositor.getRegistrationNumber(), depositor.getLegalAddress(),
                 depositor.getContactPerson(), depositor.getContactEmail(), depositor.getContactPhone(),

@@ -32,8 +32,13 @@ export function ApplicationStatus() {
         <h2>{t('Договор хранения', 'Storage agreement')}</h2>
         <p>{t('Номер договора', 'Agreement number')} {data.contract.number}</p>
         <p><a href="/api/depositors/me/contract">{t('Скачать шаблон договора (PDF)', 'Download agreement template (PDF)')}</a></p>
-        {data.status === 'AWAITING_CONTRACT' && <ContractUpload onUploaded={setData} />}
+        {(data.status === 'AWAITING_CONTRACT' || data.status === 'CONTRACT_REJECTED') &&
+          <ContractUpload onUploaded={setData} resubmitting={data.status === 'CONTRACT_REJECTED'} />}
       </section>}
+      {data?.status === 'REJECTED' && <p>{t(
+        'Для повторной подачи выйдите из кабинета и откройте регистрацию. Укажите прежние email и пароль.',
+        'To resubmit, sign out and open registration. Enter your original email and password.',
+      )}</p>}
       {(data || failed) && <button className="secondary" onClick={reload}>{t('Обновить статус', 'Refresh status')}</button>}
     </section>
   );
